@@ -47,7 +47,7 @@ MFEM_LIB_FILE = mfem_is_not_built
 BRAID_FLAGS = -I$(BRAID_DIR)
 BRAID_LIB_FILE = $(BRAID_DIR)/libbraid.a
 
-RIPS = trimgrit-burgers trischur-adv-diff trischur-ex-04
+RIPS = trimgrit-burgers trischur-adv-diff trischur-ex-04 trischur-ex-04-state
 C_NOHYPRE = ex-01 ex-01-adjoint ex-01-optimization ex-01-refinement ex-01-expanded ex-01-expanded-bdf2 ex-02 ex-04 ex-04-serial $(RIPS)
 CPP_NOHYPRE = ex-01-pp 
 F_NOHYPRE = ex-01-expanded-f
@@ -142,6 +142,9 @@ ex-04-serial: ex-04-serial.c $(BRAID_LIB_FILE) ex-04-lib.c
 
 # Rules for building RIPS drivers
 trischur-ex-04: trischur-ex-04.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+trischur-ex-04-state: trischur-ex-04-state.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 trischur-adv-diff: trischur-adv-diff.c $(BRAID_LIB_FILE)
