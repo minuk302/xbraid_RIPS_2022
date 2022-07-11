@@ -802,11 +802,10 @@ main(int argc, char *argv[])
             double **w = (app->w);
 
             apply_DAdjoint(dt, w[i], v);
-            vec_scale(1, -1.0, v);
             apply_Vinv(dt, (app->gamma_1), (app->gamma_2), v);
 
             index = (app->ilower) + i + 1;
-            fprintf(file, "%05d: % 1.14e\n", index, v[0]);
+            fprintf(file, "%05d: % 1.14e, %1.14e\n", index, v[0], v[1]);
          }
          vec_destroy(v);
          fflush(file);
