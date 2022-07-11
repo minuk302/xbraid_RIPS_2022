@@ -241,7 +241,7 @@ my_TriResidual(braid_App       app,
 
    /* rtmp = rtmp + Phi_{i+1}^T D_{i+1}^{-T} V_{i+1} D_{i+1}^{-1} Phi_{i+1} u */
    /* This term is zero at time 0, since Phi_0 = 0 */
-   if (uleft != NULL)
+   if (uright != NULL)
    {
       vec_copy(2, (r->values), utmp);
       apply_Phi(dt, utmp);
@@ -278,6 +278,7 @@ my_TriResidual(braid_App       app,
    /* subtract rhs kbar (add (L^T D^{-T} V D^{-1}) g)*/
    if (index == 0)
    {
+      
       utmp[0] = 0.0;
       utmp[1] = -1.0;
       apply_Phi(dt, utmp);
@@ -763,26 +764,6 @@ main(int argc, char *argv[])
          fclose(file);
       }
 
-       {
-      char  filename[255];
-      FILE *file;
-      int   i, index;
-
-      /* Print state u to file */
-      {
-         sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.u", (app->myid));
-         file = fopen(filename, "w");
-         for (i = 0; i < (app->npoints); i++)
-         {
-            double **u = (app->u);
-
-            index = (app->ilower) + i + 1;
-            fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, u[i][0], u[i][1]);
-         }
-         fflush(file);
-         fclose(file);
-      }
-
       /* Compute state u from adjoint w and print to file */
       /* ZTODO: This requires communication to do correctly */
       // {
@@ -816,34 +797,56 @@ main(int argc, char *argv[])
       //    fclose(file);
       // }
 
-      // /* Compute control v from adjoint w and print to file */
-      // {
-      //    double *v;
+      /* Compute control v from state u and print to file */
+      {
+         double *v;
+         double * utmp;
+         double **u = (app->u);
+         vec_create(2,&utmp);
 
-      //    sprintf(filename, "%s.%03d", "trischur-ex-04.out.v", (app->myid));
-      //    file = fopen(filename, "w");
-      //    vec_create(2, &v);
-      //    for (i = 0; i < (app->npoints); i++)
-      //    {
-      //       double **w = (app->u);
+         sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.v", (app->myid));
+         file = fopen(filename, "w");
+         vec_create(2, &v);
+         for (i = 0; i < (app->npoints); i++)
+         {
+            if (i > 0)
+            {
+               vec_copy(2, u[i-1], v);
+               apply_Phi(dt, v);
+               vec_scale(2, -1, v);
+               vec_axpy(2, 1.0, u[i], v);
+            }
+            else
+            {
+               vec_copy(2, u[i], v);
+            }
+            //apply_Phi(dt, v);
+            //vec_scale(1, -1.0, v);
+              /* Subtract g */
+            if (i == 0)
+            {
+               /* rtmp = rtmp + g; g = Phi_0 u_0 */   
+               utmp[0] =  0.0;
+               utmp[1] = -1.0;
+               apply_Phi(dt, utmp);
+               printf("%f %f\n",v[0], v[1]);
+               vec_axpy(2, -1.0, utmp, v);
+               printf("%f %f\n\n\n",v[0], v[1]);
+            }
+            apply_Dinv(dt, v, v);
+            index = (app->ilower) + i + 1;
+            fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, v[0], v[1]);
+         }
+         vec_destroy(v);
+         fflush(file);
+         fclose(file);
 
-      //       apply_DAdjoint(dt, w[i], v);
-      //       vec_scale(1, -1.0, v);
-      //       apply_Vinv(dt, (app->gamma), v);
-
-      //       index = (app->ilower) + i + 1;
-      //       fprintf(file, "%05d: % 1.14e\n", index, v[0]);
-      //    }
-      //    vec_destroy(v);
-      //    fflush(file);
-      //    fclose(file);
-
-      //    for (i = 0; i < (app->npoints); i++)
-      //    {
-      //       free(app->u[i]);
-      //    }
-      //    free(app->u);
-      // }
+         for (i = 0; i < (app->npoints); i++)
+         {
+            free(app->u[i]);
+         }
+         free(app->u);
+      }
 
    }
 
