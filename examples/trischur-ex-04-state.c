@@ -829,13 +829,11 @@ main(int argc, char *argv[])
                utmp[0] =  0.0;
                utmp[1] = -1.0;
                apply_Phi(dt, utmp);
-               printf("%f %f\n",v[0], v[1]);
-               vec_axpy(2, -1.0, utmp, v);
-               printf("%f %f\n\n\n",v[0], v[1]);
+               vec_axpy(2, 1.0, utmp, v);
             }
             apply_Dinv(dt, v, v);
             index = (app->ilower) + i + 1;
-            fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, v[0], v[1]);
+            fprintf(file, "%05d: % 1.14e, %1.14e\n", index, v[0], v[1]);
          }
          vec_destroy(v);
          fflush(file);
