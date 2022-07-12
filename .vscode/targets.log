@@ -1,0 +1,1032 @@
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+cd braid; make
+ 
+# make[1]: Entering directory '/home/minuk/xbraid_RIPS_2022/braid'
+# GNU Make 4.2.1
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2016 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+# Make data base, printed on Tue Jul 12 10:53:44 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# environment
+WSLENV = ELECTRON_RUN_AS_NODE/w:
+# default
+.SHELLFLAGS := -c
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /home/minuk/xbraid_RIPS_2022/braid
+# makefile
+SHELL = /bin/sh
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
+# environment
+_ = /mnt/c/Users/minuk/AppData/Local/Programs/Microsoft VS Code/bin/code
+# makefile (from '../makefile.inc', line 128)
+CFLAGS = -g -Wall
+# makefile (from '../makefile.inc', line 1)
+MAKEFILE_LIST :=  Makefile ../makefile.inc
+# makefile (from 'Makefile', line 76)
+BRAID_OBJ = $(BRAID_FILES:.c=.o)
+# 'override' directive
+GNUMAKEFLAGS := 
+# makefile (from '../makefile.inc', line 129)
+CXXFLAGS = -g -Wall
+# environment
+XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
+# environment
+LESSOPEN = | /usr/bin/lesspipe %s
+# environment
+VSCODE_CWD = /mnt/c/Users/minuk/AppData/Local/Programs/Microsoft VS Code
+# makefile (from '../makefile.inc', line 123)
+MPICC = mpicc
+# default
+MAKE_HOST := x86_64-pc-linux-gnu
+# environment
+PATH = /home/minuk/.vscode-server/bin/92d25e35d9bf1a6b16f7d0758f25d48ace11e5b9/bin/remote-cli:/home/minuk/miniconda3/bin:/home/minuk/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.Ubuntu_2004.4.4.0_x64__79rhkp1fndgsc:/mnt/c/Program Files (x86)/NAT Service:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0:/mnt/c/WINDOWS/System32/OpenSSH:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin:/mnt/c/Users/minuk/AppData/Local/Microsoft/WindowsApps:/mnt/c/Program Files/Bandizip:/mnt/c/Users/minuk/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/minuk/AppData/Local/GitHubDesktop/bin:/mnt/c/Users/minuk/AppData/Local/Programs/Julia-1.7.3/bin:/snap/bin
+# makefile (from 'Makefile', line 32)
+BRAID_HEADERS = _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+# environment
+CONDA_PREFIX = /home/minuk/miniconda3
+# makefile (from '../makefile.inc', line 34)
+optlevel = DEBUG
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# environment
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-257e9d4d-d81b-4269-bbca-f12593943fc6.sock
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
+# environment
+LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+# automatic
+%F = $(notdir $%)
+# environment
+CONDA_EXE = /home/minuk/miniconda3/bin/conda
+# environment
+PWD = /home/minuk/xbraid_RIPS_2022/braid
+# default
+.LOADED := 
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /home/minuk
+# makefile (from '../makefile.inc', line 124)
+MPICXX = mpiCC
+# environment
+LESSCLOSE = /usr/bin/lesspipe %s %s
+# environment
+LOGNAME = minuk
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# environment
+CONDA_PROMPT_MODIFIER = (base) 
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# makefile (from '../makefile.inc', line 54)
+HOSTNAME := DESKTOP-MOS39D0
+# environment
+MAKELEVEL := 1
+# environment
+CONDA_DEFAULT_ENV = base
+# default
+MAKE = $(MAKE_COMMAND)
+# environment
+CONDA_SHLVL = 1
+# environment
+SHLVL = 1
+# default
+MAKE_VERSION := 4.2.1
+# environment
+USER = minuk
+# makefile
+.DEFAULT_GOAL := libbraid.a
+# environment
+NAME = Code
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# makefile (from '../makefile.inc', line 126)
+LFLAGS = -lm
+# environment
+VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/minuk/.vscode/extensions/ms-vscode-remote.remote-wsl-0.66.3
+# default
+MAKE_COMMAND := make
+# environment
+OLDPWD = /home/minuk/xbraid_RIPS_2022
+# default
+.VARIABLES := 
+# automatic
+*F = $(notdir $*)
+# makefile (from '../makefile.inc', line 41)
+lvalgrind = NO
+# makefile (from 'Makefile', line 73)
+SEQFLAGS = 
+# makefile
+MAKEFLAGS = pqrRw
+# environment
+MFLAGS = -pqrRw
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# makefile (from '../makefile.inc', line 125)
+MPIF90 = mpif90
+# makefile (from '../makefile.inc', line 130)
+FORTFLAGS = -g -Wall
+# automatic
++F = $(notdir $+)
+# environment
+VSCODE_HANDLES_SIGPIPE = true
+# makefile (from '../makefile.inc', line 48)
+csequential = NO
+# 'override' directive
+.SHELLSTATUS := 0
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+LC_ALL = C
+# environment
+CONDA_PYTHON_EXE = /home/minuk/miniconda3/bin/python
+# environment
+HOSTTYPE = x86_64
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+_CE_M = 
+# default
+.INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
+# default
+.RECIPEPREFIX := 
+# environment
+LANG = C
+# environment
+TERM = xterm-256color
+# environment
+WSL_DISTRO_NAME = Ubuntu
+# makefile (from 'Makefile', line 42)
+BRAID_FILES = access.c adjoint.c base.c braid.c braid_F90_iface.c braid_status.c braid_test.c communication.c distribution.c drive.c grid.c hierarchy.c interp.c mpistubs.c norm.c refine.c relax.c residual.c restrict.c space.c step.c tape.c util.c uvector.c
+# environment
+_CE_CONDA = 
+# variable set hash-table stats:
+# Load=86/1024=8%, Rehash=0, Collisions=9/139=6%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 2, inode 2814749767623041): 65 files, no impossibilities.
+
+# 65 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+%.o: %.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+%.c:
+
+%.o:
+
+# 3 implicit rules, 0 (0.0%) terminal.
+
+# Files
+
+# Not a target:
+braid_status.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2693345
+#  File has been updated.
+#  Successfully updated.
+
+hierarchy.o: hierarchy.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'hierarchy'
+#  Last modified 2022-07-12 09:51:25.7302733
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+mpistubs.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.2296289
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+braid_test.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.2196201
+#  File has been updated.
+#  Successfully updated.
+
+communication.o: communication.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'communication'
+#  Last modified 2022-07-12 09:51:24.4509685
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+restrict.o: restrict.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'restrict'
+#  Last modified 2022-07-12 09:51:29.0618063
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+status.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2884712
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+drive.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2764639
+#  File has been updated.
+#  Successfully updated.
+
+all: libbraid.a
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+
+# Not a target:
+.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+.PHONY: all clean
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+base.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2582696
+#  File has been updated.
+#  Successfully updated.
+
+grid.o: grid.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'grid'
+#  Last modified 2022-07-12 09:51:25.4286381
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+braid_status.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2713354
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+adjoint.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2552701
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+../makefile.inc:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.3360932
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+braid.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2608993
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+uvector.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2934733
+#  File has been updated.
+#  Successfully updated.
+
+.SUFFIXES: .c .o
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+tape.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2914723
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.1856222
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+util.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.2461808
+#  File has been updated.
+#  Successfully updated.
+
+space.o: space.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'space'
+#  Last modified 2022-07-12 09:51:29.3729385
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+residual.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2864706
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+interp.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2824744
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+braid_F90_iface.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2663175
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+braid.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2629428
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+hierarchy.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2804762
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+communication.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2733377
+#  File has been updated.
+#  Successfully updated.
+
+access.o: access.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'access'
+#  Last modified 2022-07-12 09:51:22.1534222
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+tape.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2924726
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+restrict.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2874718
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+util.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.2471773
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+.c:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+distribution.o: distribution.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'distribution'
+#  Last modified 2022-07-12 09:51:24.7780693
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+grid.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2784729
+#  File has been updated.
+#  Successfully updated.
+
+mpistubs.o: mpistubs.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'mpistubs'
+#  Last modified 2022-07-12 09:51:26.6257522
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+norm.o: norm.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'norm'
+#  Last modified 2022-07-12 09:51:27.1606976
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+braid_test.o: braid_test.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'braid_test'
+#  Last modified 2022-07-12 09:51:24.1751246
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+ 
+#  File has not been updated.
+
+# Not a target:
+refine.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2844706
+#  File has been updated.
+#  Successfully updated.
+
+step.o: step.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'step'
+#  Last modified 2022-07-12 09:51:29.7217682
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+space.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.24018
+#  File has been updated.
+#  Successfully updated.
+
+base.o: base.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'base'
+#  Last modified 2022-07-12 09:51:22.8294079
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+refine.o: refine.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'refine'
+#  Last modified 2022-07-12 09:51:27.5250022
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+braid_status.o: braid_status.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'braid_status'
+#  Last modified 2022-07-12 09:51:23.8611504
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+clean:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 94):
+	rm -f *.o libbraid.a
+
+# Not a target:
+_braid.h:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2522703
+#  File has been updated.
+#  Successfully updated.
+
+libbraid.a: _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h access.o adjoint.o base.o braid.o braid_F90_iface.o braid_status.o braid_test.o communication.o distribution.o drive.o grid.o hierarchy.o interp.o mpistubs.o norm.o refine.o relax.o residual.o restrict.o space.o step.o tape.o util.o uvector.o
+#  Implicit rule search has not been done.
+#  Last modified 2022-07-12 09:51:31.5586843
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 87):
+	@echo "Building" $@ "..."
+	ar cruv libbraid.a $(BRAID_OBJ)
+	ranlib libbraid.a
+
+drive.o: drive.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'drive'
+#  Last modified 2022-07-12 09:51:25.0707482
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+access.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2532709
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+distribution.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2743388
+#  File has been updated.
+#  Successfully updated.
+
+adjoint.o: adjoint.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'adjoint'
+#  Last modified 2022-07-12 09:51:22.5077697
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+braid.o: braid.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'braid'
+#  Last modified 2022-07-12 09:51:23.174924
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+uvector.o: uvector.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'uvector'
+#  Last modified 2022-07-12 09:51:30.9992026
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+relax.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.28547
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+norm.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.2321955
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+braid_test.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.218624
+#  File has been updated.
+#  Successfully updated.
+
+tape.o: tape.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'tape'
+#  Last modified 2022-07-12 09:51:30.0393304
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+util.o: util.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'util'
+#  Last modified 2022-07-12 09:51:30.5378137
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+relax.o: relax.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'relax'
+#  Last modified 2022-07-12 09:51:28.0134587
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+residual.o: residual.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'residual'
+#  Last modified 2022-07-12 09:51:28.6372934
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+interp.o: interp.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'interp'
+#  Last modified 2022-07-12 09:51:26.1735159
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+braid_F90_iface.o: braid_F90_iface.c _braid.h base.h status.h tape.h util.h braid.h braid_status.h braid_test.h
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'braid_F90_iface'
+#  Last modified 2022-07-12 09:51:23.5138838
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 84):
+	$(MPICC) $(SEQFLAGS) $(CFLAGS) -c $< -o $@
+
+# Not a target:
+step.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2894719
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+base.c:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:32:00.2572697
+#  File has been updated.
+#  Successfully updated.
+
+# files hash-table stats:
+# Load=66/1024=6%, Rehash=0, Collisions=87/577=15%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 101 / storage = 933 B / avg = 9 B
+# current buf: size = 8162 B / used = 933 B / count = 101 / avg = 9 B
+
+# strcache performance: lookups = 591 / hit rate = 82%
+# hash-table stats:
+# Load=101/8192=1%, Rehash=0, Collisions=8/591=1%
+# Finished Make data base on Tue Jul 12 10:53:44 2022
+
+# make[1]: Leaving directory '/home/minuk/xbraid_RIPS_2022/braid'
+# GNU Make 4.2.1
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2016 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+# Make data base, printed on Tue Jul 12 10:53:44 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# environment
+WSLENV = ELECTRON_RUN_AS_NODE/w:
+# default
+.SHELLFLAGS := -c
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /home/minuk/xbraid_RIPS_2022
+# makefile
+SHELL = /bin/sh
+# environment
+VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
+# environment
+_ = /mnt/c/Users/minuk/AppData/Local/Programs/Microsoft VS Code/bin/code
+# makefile (from 'Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# 'override' directive
+GNUMAKEFLAGS := 
+# environment
+XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
+# environment
+LESSOPEN = | /usr/bin/lesspipe %s
+# environment
+VSCODE_CWD = /mnt/c/Users/minuk/AppData/Local/Programs/Microsoft VS Code
+# default
+MAKE_HOST := x86_64-pc-linux-gnu
+# environment
+PATH = /home/minuk/.vscode-server/bin/92d25e35d9bf1a6b16f7d0758f25d48ace11e5b9/bin/remote-cli:/home/minuk/miniconda3/bin:/home/minuk/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.Ubuntu_2004.4.4.0_x64__79rhkp1fndgsc:/mnt/c/Program Files (x86)/NAT Service:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0:/mnt/c/WINDOWS/System32/OpenSSH:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Docker/Docker/resources/bin:/mnt/c/ProgramData/DockerDesktop/version-bin:/mnt/c/Users/minuk/AppData/Local/Microsoft/WindowsApps:/mnt/c/Program Files/Bandizip:/mnt/c/Users/minuk/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/minuk/AppData/Local/GitHubDesktop/bin:/mnt/c/Users/minuk/AppData/Local/Programs/Julia-1.7.3/bin:/snap/bin
+# environment
+CONDA_PREFIX = /home/minuk/miniconda3
+# environment
+ELECTRON_RUN_AS_NODE = 1
+# environment
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-257e9d4d-d81b-4269-bbca-f12593943fc6.sock
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
+# environment
+LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+# automatic
+%F = $(notdir $%)
+# environment
+CONDA_EXE = /home/minuk/miniconda3/bin/conda
+# environment
+PWD = /home/minuk/xbraid_RIPS_2022
+# default
+.LOADED := 
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /home/minuk
+# environment
+LESSCLOSE = /usr/bin/lesspipe %s %s
+# environment
+LOGNAME = minuk
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+# environment
+CONDA_PROMPT_MODIFIER = (base) 
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+MAKELEVEL := 0
+# environment
+CONDA_DEFAULT_ENV = base
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+CONDA_SHLVL = 1
+# environment
+SHLVL = 1
+# default
+MAKE_VERSION := 4.2.1
+# environment
+USER = minuk
+# makefile
+.DEFAULT_GOAL := all
+# environment
+NAME = Code
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# environment
+VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/minuk/.vscode/extensions/ms-vscode-remote.remote-wsl-0.66.3
+# default
+MAKE_COMMAND := make
+# default
+.VARIABLES := 
+# automatic
+*F = $(notdir $*)
+# makefile
+MAKEFLAGS = pqrR
+# environment
+MFLAGS = -pqrR
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# automatic
++F = $(notdir $+)
+# environment
+VSCODE_HANDLES_SIGPIPE = true
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+LC_ALL = C
+# environment
+CONDA_PYTHON_EXE = /home/minuk/miniconda3/bin/python
+# environment
+HOSTTYPE = x86_64
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+_CE_M = 
+# default
+.INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
+# default
+.RECIPEPREFIX := 
+# environment
+LANG = C
+# environment
+TERM = xterm-256color
+# environment
+WSL_DISTRO_NAME = Ubuntu
+# environment
+_CE_CONDA = 
+# variable set hash-table stats:
+# Load=70/1024=7%, Rehash=0, Collisions=6/100=6%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 2, inode 261208778387493832): 16 files, no impossibilities.
+
+# 16 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+drivers: braid/libbraid.a
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 40):
+	cd drivers; $(MAKE)
+
+all: braid examples
+#  Phony target (prerequisite of .PHONY).
+#  Command line target.
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has been updated.
+#  Successfully updated.
+# variable set hash-table stats:
+# Load=0/32=0%, Rehash=0, Collisions=0/5=0%
+
+.PHONY: all braid clean
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+.SUFFIXES:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-11 13:28:14.1806868
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+braid/libbraid.a:
+#  Implicit rule search has been done.
+#  Last modified 2022-07-12 09:51:31.5586843
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+clean:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 43):
+	cd examples; $(MAKE) clean
+	cd drivers; $(MAKE) clean
+	cd braid; $(MAKE) clean
+
+braid:
+#  Phony target (prerequisite of .PHONY).
+#  Implicit rule search has not been done.
+#  Implicit/static pattern stem: ''
+#  File does not exist.
+#  File has been updated.
+#  Successfully updated.
+# automatic
+# @ := braid
+# automatic
+# % := 
+# automatic
+# * := 
+# automatic
+# + := 
+# automatic
+# | := 
+# automatic
+# < := 
+# automatic
+# ^ := 
+# automatic
+# ? := 
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=2/13=15%
+#  recipe to execute (from 'Makefile', line 34):
+	cd braid; $(MAKE)
+
+examples: braid/libbraid.a
+#  Implicit rule search has not been done.
+#  Last modified 2022-07-12 10:32:59.6826758
+#  File has been updated.
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 37):
+	cd examples; $(MAKE)
+
+info:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 48):
+	@echo "MPICC     = `which $(MPICC)`"
+	@echo "MPICXX    = `which $(MPICXX)`"
+	@echo "MPIF90    = `which $(MPIF90)`"
+	@echo "CFLAGS    = $(CFLAGS)"
+	@echo "CXXFLAGS  = $(CXXFLAGS)"
+	@echo "FORTFLAGS = $(FORTFLAGS)"
+	@echo "LFLAGS    = $(LFLAGS)"
+
+# files hash-table stats:
+# Load=11/1024=1%, Rehash=0, Collisions=0/33=0%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 25 / storage = 206 B / avg = 8 B
+# current buf: size = 8162 B / used = 206 B / count = 25 / avg = 8 B
+
+# strcache performance: lookups = 47 / hit rate = 46%
+# hash-table stats:
+# Load=25/8192=0%, Rehash=0, Collisions=1/47=2%
+# Finished Make data base on Tue Jul 12 10:53:44 2022
+
+ 

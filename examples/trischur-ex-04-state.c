@@ -278,15 +278,14 @@ my_TriResidual(braid_App       app,
    /* subtract rhs kbar (add (L^T D^{-T} V D^{-1}) g)*/
    if (index == 0)
    {
-      
       utmp[0] = 0.0;
       utmp[1] = -1.0;
       apply_Phi(dt, utmp);
       apply_Dinv(dt, utmp, utmp);
       apply_V(dt, gamma_1, gamma_2, utmp);
       apply_DAdjointinv(dt, utmp, utmp);
-      vec_axpy(2, 1.0, utmp, rtmp);
-   }
+      vec_axpy(2, -1.0, utmp, rtmp);
+   }`
    
    if (f!= NULL)
    {
@@ -766,36 +765,36 @@ main(int argc, char *argv[])
 
       /* Compute state u from adjoint w and print to file */
       /* ZTODO: This requires communication to do correctly */
-      // {
-      //    double *u;
+      {
+         double *u;
 
-      //    sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.u", (app->myid));
-      //    file = fopen(filename, "w");
-      //    vec_create(2, &u);
-      //    for (i = 0; i < (app->npoints); i++)
-      //    {
-      //       double **u = (app->u);
+         sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.u", (app->myid));
+         file = fopen(filename, "w");
+         vec_create(2, &u);
+         for (i = 0; i < (app->npoints); i++)
+         {
+            double **u = (app->u);
 
-      //       if ((i+1) < (app->npoints))
-      //       {
-      //          vec_copy(2, w[i+1], u);
-      //          apply_PhiAdjoint(dt, u);
-      //          vec_axpy(2, -1.0, w[i], u);
-      //       }
-      //       else
-      //       {
-      //          vec_copy(2, w[i], u);
-      //          vec_scale(2, -1.0, u);
-      //       }
-      //       apply_Uinv(dt, u);
+            if ((i+1) < (app->npoints))
+            {
+               vec_copy(2, w[i+1], u);
+               apply_PhiAdjoint(dt, u);
+               vec_axpy(2, -1.0, w[i], u);
+            }
+            else
+            {
+               vec_copy(2, w[i], u);
+               vec_scale(2, -1.0, u);
+            }
+            apply_Uinv(dt, u);
 
-      //       index = (app->ilower) + i + 1;
-      //       fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, u[0], u[1]);
-      //    }
-      //    vec_destroy(u);
-      //    fflush(file);
-      //    fclose(file);
-      // }
+            index = (app->ilower) + i + 1;
+            fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, u[0], u[1]);
+         }
+         vec_destroy(u);
+         fflush(file);
+         fclose(file);
+      }
 
       /* Compute control v from state u and print to file */
       {
@@ -829,11 +828,11 @@ main(int argc, char *argv[])
                utmp[0] =  0.0;
                utmp[1] = -1.0;
                apply_Phi(dt, utmp);
-               vec_axpy(2, 1.0, utmp, v);
+               vec_axpy(2, -1.0, utmp, v);
             }
             apply_Dinv(dt, v, v);
             index = (app->ilower) + i + 1;
-            fprintf(file, "%05d: % 1.14e, %1.14e\n", index, v[0], v[1]);
+            fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, v[0], v[1]);
          }
          vec_destroy(v);
          fflush(file);
