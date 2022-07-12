@@ -144,10 +144,10 @@ ex-04-serial: ex-04-serial.c $(BRAID_LIB_FILE) ex-04-lib.c
 trischur-ex-04: trischur-ex-04.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-trischur-ex-04-state: trischur-ex-04-state.c $(BRAID_LIB_FILE)
+trischur-ex-14-state: trischur-ex-14-state.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-trischur-new-adj: trischur-new-adj.c $(BRAID_LIB_FILE)
+trischur-ex-14-adj: trischur-ex-14-adj.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 trischur-adv-diff: trischur-adv-diff.c $(BRAID_LIB_FILE)
