@@ -589,7 +589,7 @@ main(int argc, char *argv[])
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    /* Define time domain */
-   ntime  = 200;              /* Total number of time-steps */
+   ntime  = 20;              /* Total number of time-steps */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
 
