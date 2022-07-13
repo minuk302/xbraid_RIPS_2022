@@ -380,10 +380,10 @@ my_Init(braid_App     app,
    u = (my_Vector *) malloc(sizeof(my_Vector));
    vec_create(2, &(u->values));
 
-   u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
-   u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
-   //u->values[0] = 0.0;
-   //u->values[1] = -1.0;
+   //u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
+   //u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
+   u->values[0] = 0.0;
+   u->values[1] = -1.0;
 
    *u_ptr = u;
 
@@ -589,7 +589,7 @@ main(int argc, char *argv[])
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    /* Define time domain */
-   ntime  = 20;              /* Total number of time-steps */
+   ntime  = 200;              /* Total number of time-steps */
    tstart = 0.0;             /* Beginning of time domain */
    tstop  = 1.0;             /* End of time domain*/
 
@@ -744,7 +744,7 @@ main(int argc, char *argv[])
 
       /* Print adjoint w to file */
       {
-         sprintf(filename, "%s.%03d", "trischur-new-adj.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "trischur-ex-14-adj.out.w", (app->myid));
          file = fopen(filename, "w");
          for (i = 0; i < (app->npoints); i++)
          {
@@ -762,7 +762,7 @@ main(int argc, char *argv[])
       {
          double *u;
 
-         sprintf(filename, "%s.%03d", "trischur-new-adj.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "trischur-ex-14-adj.out.u", (app->myid));
          file = fopen(filename, "w");
          vec_create(2, &u);
          for (i = 0; i < (app->npoints); i++)
@@ -794,7 +794,7 @@ main(int argc, char *argv[])
       {
          double *v;
 
-         sprintf(filename, "%s.%03d", "trischur-new-adj.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "trischur-ex-14-adj.out.v", (app->myid));
          file = fopen(filename, "w");
          vec_create(2, &v);
          for (i = 0; i < (app->npoints); i++)
