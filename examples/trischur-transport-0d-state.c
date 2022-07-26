@@ -186,8 +186,7 @@ apply_DAdjointinv(double dt, double *w, double *v)
 
 /* Compute A(u) - f */
 
-int
-my_TriResidual(braid_App       app,
+int my_TriResidual(braid_App       app,
                braid_Vector    uleft,
                braid_Vector    uright,
                braid_Vector    f,
@@ -195,8 +194,8 @@ my_TriResidual(braid_App       app,
                braid_TriStatus status)
 {
    double  t, tprev, tnext, dt;
-   double *rtmp, *utmp, *htmp, *h_o
-, &*gtmpt   empint     level, index;
+   double *rtmp, *utmp, *htmp, *h_othertemp, *gtmp, *ktmp;
+   int     level, index;
    
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
@@ -214,10 +213,11 @@ my_TriResidual(braid_App       app,
 
    /* Create temporary vectors */
    vec_create(1, &rtmp);
-   vec_create(1, &utmp
-   vec_create(1,&h_othertemp);
-   vec_create(1,&gtmp););
+   vec_create(1, &utmp);
+   vec_create(1, &h_othertemp);
+   vec_create(1, &gtmp);
    vec_create(1, &htmp);
+   vec_create(1, &ktmp);
 
    /* rtmp = U_i u */
    vec_copy(1, (r->values), utmp);
@@ -273,28 +273,27 @@ my_TriResidual(braid_App       app,
       vec_axpy(1, -1.0, utmp, rtmp);
    }
    /* subtract rhs kbar (add -k - L^T D^{-T} V D^{-1} g - L^T D^{-T} h*/
-   htmp[1] = h[index];
-   h_othertemp[1] = h[index+1];
-   gtmp[1] = g[index];
+   htmp[0] = h[index];
+   h_othertemp[0] = h[index+1];
+   gtmp[0] = g[index];
+   ktmp[0] = k[index];
    
-   apply_DAdjointinv(
-   htmp[0] = h[index];dt, htmp, htmp); 
+   apply_DAdjointinv(dt, htmp, htmp); 
    vec_copy(1,h_othertemp,rtmp);
-   why is this, the vec_copy wants double vector for second input vec_axpy(1, -1, htmp, rtmp); 
+   vec_axpy(1, -1, htmp, rtmp); 
    
    
    apply_Dinv(dt, gtmp, gtmp);
    apply_V(dt, gtmp, gtmp);
-   apply_DAdjointinv(dt, gtmp, u, v, index);
-   apply_PhiAdjoint(dt, gtmp);
+   apply_DAdjointinv(dt, gtmp, gtmp);
    vec_axpy(1, -1, gtmp, rtmp);
 
-   vec_axpy(1, -1, k[index], rtmp);
+   vec_axpy(1, -1, ktemp, rtmp);
    
    
    if (f!= NULL)
    {
-  tmp_axpyok are we good miho(1,mtmp residual vector into residual */
+   /*i dont know what this was supposed to be     tmp_axpy(1,mtmp residual vector into residual */
    vec_copy(1, rtmp, (r->values));
    
    /* Destroy temporary vectors */
@@ -628,8 +627,9 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
    /* Initialize k, h, g vectors */
    veuble * k;
    double * h;
-   double * g;c_create(u_)
+   double * g;
    /* Initialive XBr-1aid */
+   vec_create(v_size-1, &k);
    vec_create(v_size, &h);
    vec_create(v_size, &g);
    fill_k(r,k,v_size-1);
@@ -742,10 +742,10 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
       //          apply_Phi(dt, utmp);
       //          vec_axpy(1, -1.0, utmp, v);
       //       }
-               if (i == (app-> npoints) - 1)
-               {
+      //         if (i == (app-> npoints) - 1)
+      //         {
 
-               }
+      //         }
       //       apply_Dinv(dt, v, v);
       //       index = (app->ilower) + i + 1;
       //       fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, v[0]);
@@ -763,23 +763,28 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
 
    }
 
-*    free(app);
-*    
+/*    free(app);
+    
    braid_Destroy(core);
    MPI_Finalize();
 
    return (0);
  
- /*Given  x, Computes Hx*/}
- 
+ }
+*/
 
+/*Given  x, Computes Hx*/
 void ApplyH(double *u, double *v, double dt, double *x, double *Hx, int n){
    
-uble quick_norm(double *v, int n){
+}
+   
+void quick_norm(double *v, int n){
    double sum = 0.0;
-
-CGiven Fx, /*Appli*/ comput
-   vec_destroy(dx);
+   for (int i = 0; i < n; i++){
+      sum += v[i]*v[i];
+   }
+   return sqrt(sum);
+}
  
 
 /* compute F(x)=\nabla F(u,v,w)*/
@@ -812,47 +817,43 @@ void ApplyF(double *u, double *v, double *w, double *g, double dt, int n){
    vec_destroy(utmp);
    vec_destroy(vtmp);
    vec_destroy(wtmp);
-}  vec_destroy(r);
-   vec_destroy(e);
-   vec_destroy(Hdx);es H^{-1}Fx for (int i = 0; i < n; i++){
-      sus Hm += v[i]*v[i];
-   }
-, *tmp   return sqrt(sum);
-Hdx}
+}
+ 
 
 
-
-   //compute the first residual   vec_create(3*n-1, &tmp);
-Hdx
-void ApplyJacFxInv(double *Fx, double *u, double *v, double *w, double *g, double dt, int n){
-   _copy(3*n-1, Fx, r);
    
-   ApplyH(u, v, dt, dx, Hdx, n);
-      vec_axpy(3*n-1, -1.0, Hdx, r);   double *dx, *r, *e;
+void ApplyJacFxInv(double *Fx, double *u, double *v, double *w, double *g, double dt, int n){
+   double *dx, *r, *e, *Hdx;
    vec_create(3*n-1, &dx);
    vec_create(3*n-1, &r);
    vec_create(3*n-1, &e);
+   vec_create(3*n-1, &Hdx);
 
-{}   double tol = 1e-6;
+   double tol = 1e-6;
    int max_itr = 10;
-vec_copy(3*n-1, Fx, r);
-
-      ApplyH(u, v, dt, dx, Hdx, n);
-      vec_axpy(3*n-1, 1.0, e, dx);      
+   //compute the first residual   
+   vec_copy(3*n-1, Fx, r);
+   ApplyH(u, v, dt, dx, Hdx, n);
+   vec_axpy(3*n-1, -1.0, Hdx, r);   
    int itr = 0;
-{}    
-r   while (sqrt(quic k- r_noHdxm(r,3*n-1)) > tol && itr < max_itr){
-      // r <- Fx-H*dx
 
-      // e <- Hp^-1*      /*one iteration carries out dx = dx + Hp^-1*(Fx-H*dx)*/
-   vec_copy(3*n-1, dx, Fx);
-n      solveHp(double *e, double *r, double *u, double *v, double dt, int u_size);
+   while (quick_norm(r,3*n-1) > tol && itr < max_itr){
+      /*one iteration carries out dx = dx + Hp^-1*(Fx-H*dx)*/
+      // r <- Fx-H*dx
+      vec_copy(3*n-1, Fx, r);
+      ApplyH(u, v, dt, dx, Hdx, n);
+      vec_axpy(3*n-1, -1.0, Hdx, r);   
+      // e <- Hp^-1 * r     
+      solveHp(*e, *r, *u, *v, dt, n);
       // dx <- dx + e
       vec_axpy(3*n-1, 1.0, e, dx);
-v      itr++;
+      itr++;
    }
-   
-
+   vec_copy(3*n-1, dx, Fx);
+   vec_destroy(dx);
+   vec_destroy(r);
+   vec_destroy(e);
+   vec_destroy(Hdx);
 }
 
 /*--------------------------------------------------------------------------
@@ -861,9 +862,15 @@ v      itr++;
 
 int main(int argc, char *argv[])
 {
-//    braid_Core  core;
+double      tstart, tstop, dt;
+dou
+
+int ntime;
+int xsize = 3 * ntime - 1;
+ble * x;
+xntime, ;
+for(int i = 0; i < ntime; i++)vec_create()//    braid_Core  core;
 //    my_App     *app;
-         
 //    double      tstart, tstop, dt; 
 //    int         rank, ntime, arg_index;
 //    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter, max_newton_iter;
@@ -1124,4 +1131,4 @@ int main(int argc, char *argv[])
 //    MPI_Finalize();
 
 //    return (0);
-}
+}//
