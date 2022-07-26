@@ -156,6 +156,9 @@ trischur-adv-diff: trischur-adv-diff.c $(BRAID_LIB_FILE)
 trimgrit-burgers: trimgrit-burgers.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
+trischur-transport-0d-state: trischur-transport-0d-state.c $(BRAID_LIB_FILE)
+	@echo "Building" $@ "..."
+	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
 
 # Rule for compiling .cpp files; links with mfem
 %: %.cpp $(BRAID_LIB_FILE) $(MFEM_LIB_FILE) $(MFEM_CONFIG_MK)
