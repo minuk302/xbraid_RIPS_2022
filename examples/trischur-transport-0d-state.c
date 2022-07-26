@@ -149,7 +149,7 @@ apply_PhiAdjoint(double dt, double *w)
 void
 apply_U(double dt, double *jm, double *u, double * v, int index)
 {
-   * jm = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
+   jm = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
 }
 
 /*------------------------------------*/
@@ -157,12 +157,22 @@ apply_U(double dt, double *jm, double *u, double * v, int index)
 void
 apply_V(double dt, double * rob, double *u, double *v, int index)
 {
-   * rob = dt * (1/u[index-1]+1/u[index]);
+   rob = dt * (1/u[index-1]+1/u[index]);
 }
 
 /*------------------------------------*/
 
 /* Maps v to w (which may be the same pointer) */
+void
+apply_D(double dt, double *v, double *w)
+{
+   w[0] = -v[0]*dt; 
+}
+void
+apply_DAdjoint(double dt, double *v, double *w)
+{
+   w[0] = -v[0]*dt; 
+}
 void
 apply_Dinv(double dt, double *v, double *w)
 {
@@ -305,28 +315,38 @@ int my_TriResidual(braid_App       app,
 
 /*------------------------------------*/
 
+void extract(double *r, double *k, double *h, double *g, int v_size) 
+{
+   for(int i = 0; i < v_size - 1; i++)
+   {
+      k[i] = r[i];
+   }
+   for(int i =0 i < v _size; i++)
+   {
+      h[i] = r[i+v_size - 1];
+   }
+   for(int i = 0; i < v_size - 1; i++)
+   {
+      g[i] = r[i + 2 * v_size - 1];
+   }
+}
+
+void merge(double *r, double *k, double *h, double *g, int v_size){
+   for(int i = 0; i < v_size - 1; i++)
+   {
+      r[i] = k[i];
+   }
+   for(int i =0 i < v _size; i++)
+   {
+      r[i+v_size - 1] = h[i];
+   }
+   for(int i = 0; i < v_size - 1; i++)
+   {
+      r[i + 2 * v_size - 1] = g[i];
+   }
+}
+
 /* Solve A(u) = f */
-void fill_k(double *r, double *k, int u_size) 
-{
-   for(int i = 0; i < u_size; i++)
-   {
-      k[i] = r[i]
-   }
-}
-void fill_h(double *r, double *h, int v_size) 
-{
-   for(int i = 0; i < v_size; i++)
-   {
-      h[i] = r[i]
-   }
-}
-void fill_g(double *r, double *g, int v_size) 
-{
-   for(int i = 0; i < v_size; i++)
-   {
-      g[i] = r[i]
-   }
-}
 int
 my_TriSolve(braid_App       app,
             braid_Vector    uleft,
@@ -582,7 +602,7 @@ my_BufUnpack(braid_App           app,
 }
 
 
-
+/*solves for e in H_p e = r*/
 void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
    braid_Core  core;
    my_App     *app;
@@ -632,9 +652,7 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
    vec_create(v_size-1, &k);
    vec_create(v_size, &h);
    vec_create(v_size, &g);
-   fill_k(r,k,v_size-1);
-   fill_h(r,h,v_size);
-   fill_g(r,g,v_size);
+   extract(r, k, h, g, v_size);
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
@@ -677,6 +695,7 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
          fflush(file);
          fclose(file);
       }
+   }
 
       /* Compute adjoint w from u and print to file */
       /* ZTODO: This requires communication to do correctly */
@@ -761,7 +780,8 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
       //    free(app->u);
       // }
 
-   }
+   
+}
 
 /*    free(app);
     
@@ -775,7 +795,83 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
 
 /*Given  x, Computes Hx*/
 void ApplyH(double *u, double *v, double dt, double *x, double *Hx, int n){
-   
+   double * utmp;
+   double * vtmp;
+   double * wtmp;
+   double * rtmp;
+   vec_create(1, &utmp);
+   vec_create(1, &vtmp);
+   vec_create(1, &wtmp);
+   vec_create(1, &rtmp);
+
+   double* uOfx = x;
+   double* vOfx = x+(n-1);
+   double* wOfx = x+(n+(n-1));
+
+   int HxIndex=0;
+   for ( int i = 0; i < n-1; i++ ) // U*u + B^T*v + L^T*w
+   {
+      rtmp[0] = 0.0;
+      // U*u
+      utmp[0] = 0.0;
+      apply_U(dt, utmp, u, v, i);
+      rtmp[0] = utmp[0]*uOfx[i]
+
+      // + B^T*v
+      vtmp[0] = 0.0;
+      vtmp[0] -= dt*v[i]/(u[i]*u[i])*vOfx[i];
+      vtmp[0] -= dt*v[i+1]/(u[i]*u[i])*vOfx[i+1];
+      rtmp[0] += vtmp[0];
+
+      // + L^T*w
+      rtmp[0] += wOfx[i] - wOfx[i+1];
+      Hx[HxIndex] = rtmp[0];
+      ++HxIndex;
+   }
+
+   for ( int i = 0; i < n; i++ ) // B*u + V*v - D^T*w
+   {
+      rtmp[0] = 0.0;
+      //B*u
+      utmp[0] = 0;
+      if ( i != n-1 ) utmp[0] -= dt*v[i]/(u[i]*u[i])*uOfx[i];
+      if ( i != 0 ) utmp[0] -= dt*v[i]/(u[i-1]*u[i-1])*uOfx[i-1];
+      rtmp[0] = utmp[0];
+
+      // + V*v
+      vtmp[0]=vOfx[i];
+      apply_V(dt,vtmp,u,v,i);
+      rtmp[0] += vtmp[0]*vOfx[i]
+
+      // - D^T*w
+      wtmp[0]=wOfx[i];
+      apply_DAdjoint(dt, wtmp, wtmp);
+      vec_axpy(1, -1, wtmp, rtmp);
+      Hx[HxIndex] = rtmp[0];
+      ++HxIndex;
+   }
+
+   for ( int i = 0; i < n; i++ ) // L*u - D*v
+   {
+      rtmp[0] = 0.0;
+      // L*u
+      wtmp[0] = 0;
+      if ( i != n-1 ) wtmp[0] += uOfx[i];
+      if ( i != 0 ) wtmp[0] -= uOfx[i-1];
+      rtmp[0] = wtmp[0];
+
+      // - D*v
+      vtmp[0] = vOfx[i];
+      apply_D(dt,vtmp,vtmp);
+      vec_axpy(1,-1,vtmp,rtmp)
+      Hx[HxIndex] = rtmp[0];
+      ++HxIndex;
+   }
+
+   vec_destroy(utmp);
+   vec_destroy(vtmp);
+   vec_destroy(wtmp);
+   vec_destroy(rtmp);
 }
    
 void quick_norm(double *v, int n){
@@ -788,7 +884,7 @@ void quick_norm(double *v, int n){
  
 
 /* compute F(x)=\nabla F(u,v,w)*/
-void ApplyF(double *u, double *v, double *w, double *g, double dt, int n){
+void ApplyF(double *u, double *v, double *w, double *g, double *Fx, double dt, int n){
    double *utmp, *vtmp, *wtmp; 
    
    vec_create(n-1, &utmp);
@@ -814,15 +910,15 @@ void ApplyF(double *u, double *v, double *w, double *g, double dt, int n){
    }
    vec_copy(n, wtmp, w);
 
+   merge(Fx, utmp, vtmp, wtmp, n);
    vec_destroy(utmp);
    vec_destroy(vtmp);
    vec_destroy(wtmp);
 }
  
 
-
-   
-void ApplyJacFxInv(double *Fx, double *u, double *v, double *w, double *g, double dt, int n){
+/* Apply Jac[F(x)]^-1*/
+void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n){
    double *dx, *r, *e, *Hdx;
    vec_create(3*n-1, &dx);
    vec_create(3*n-1, &r);
@@ -862,14 +958,47 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double *w, double *g, doubl
 
 int main(int argc, char *argv[])
 {
-double      tstart, tstop, dt;
-dou
+   double    tstart, tstop, dt;
+   int ntime;
+   int xsize = 3 * ntime - 1;
+   double u_in, u_out;
+   double * x, * y, *u, * v, *w, *g ;
+   vec_create(xsize, x);
+   vec_create(xsize, y);
+   vec_create(ntime - 1, u);
+   vec_create(ntime, v);
+   vec_create(ntime, w);
+   vec_create(ntime, g);
 
-int ntime;
-int xsize = 3 * ntime - 1;
-ble * x;
-xntime, ;
-for(int i = 0; i < ntime; i++)vec_create()//    braid_Core  core;
+   //initialize g
+   for(int i = 0; i < ntime; i++)
+   {
+      g[i] = 0;
+   }   
+   
+   //initialize u in , u out, put them into g
+   u_in = 0.0;
+   u_out = 1.0;
+   g[0] = u_in;
+   g[ntime-1] = -u_out;
+
+   //get dt
+   dt = (tstart - tstop)/ntime;
+
+   //initialize x vector to all 1's
+   for(int i = 0; i < ntime; i++)
+   {
+      x[i]=1;
+   }
+
+   //apply F to x after extracting u, v, w, store in 
+
+   extract(x,  k, h, g, ntime);
+
+   applyF(u, v, w, g, y, dt, ntime);
+    ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n)
+
+   //    braid_Core  core;
 //    my_App     *app;
 //    double      tstart, tstop, dt; 
 //    int         rank, ntime, arg_index;
