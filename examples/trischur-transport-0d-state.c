@@ -71,8 +71,6 @@ typedef struct _braid_App_struct
 double u_in = 0;
 double u_out = 0;
 double tstart, tstop;
-int argc;
-char** argv;
 
 /* Define the state vector at one time-step */
 typedef struct _braid_Vector_struct
@@ -186,12 +184,20 @@ void
 apply_U(double dt, double *jm, double *u, double * v, int index)
 {
    jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
+   /*if (index < v_size - 1) 
+   {
+      jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
+   }
+   else
+   {
+      jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u_out * u_out * u_out);
+   }*/
 }
 
 /*------------------------------------*/
 /* apply_V(dt, INSERT MATRIX HERE, u, v, INSERT INDEX HERE);*/
 void
-apply_V(double dt, double * rob, double *u, double *v, int index, int v_size)
+apply_V(double dt, double * rob, double *u, double *v, int index, int v_size, double u_in, double u_out)
 {
    if (index == 0)
    {
@@ -256,7 +262,7 @@ int my_TriResidual(braid_App       app,
    double *rtmp, *utmp, *htmp, *h_othertemp, *gtmp, *ktmp, *g_othertemp, *u, *v;
    double  *k, *h, *g;
    int     level, index;
-   int v_size = app->npoints;
+   int v_size = app->ntime;
    u = app->input_u;
    v = app->input_v;
    
@@ -299,7 +305,7 @@ int my_TriResidual(braid_App       app,
    /* rtmp = rtmp + D_i^-T V_i D_i^-1 u */
    vec_copy(1, (r->values), utmp);
    apply_Dinv(dt, utmp, utmp);
-   apply_V(dt, utmp, u, v, index, v_size);
+   apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
    //apply_V(dt, gamma_1, gamma_2, utmp);
    apply_DAdjointinv( dt, utmp, utmp);
    vec_axpy(1, 1.0, utmp, rtmp);
@@ -311,7 +317,7 @@ int my_TriResidual(braid_App       app,
       vec_copy(1, (r->values), utmp);
       apply_Phi(dt, utmp);
       apply_Dinv(dt, utmp, utmp);
-      apply_V(dt, utmp, u, v, index, v_size);
+      apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
       //apply_V(dt, gamma_1, gamma_2, utmp);
       apply_DAdjointinv(dt, utmp, utmp);
       apply_PhiAdjoint(dt, utmp);
@@ -325,7 +331,7 @@ int my_TriResidual(braid_App       app,
       vec_copy(1, (uleft->values), utmp);
       apply_Phi(dt, utmp);
       apply_Dinv(dt, utmp, utmp);
-      apply_V(dt, utmp, u, v, index, v_size);
+      apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
       //apply_V(dt, gamma_1, gamma_2, utmp);
       apply_DAdjointinv(dt, utmp, utmp);
       vec_axpy(1, -1.0, utmp, rtmp);
@@ -337,7 +343,7 @@ int my_TriResidual(braid_App       app,
       /* rtmp = rtmp - Phi_{i+1}^T D_{i+1}^{-T} V_{i+1} D_{i+1}^{-1} uright */
       vec_copy(1, (uright->values), utmp);
       apply_Dinv(dt, utmp, utmp);
-      apply_V(dt, utmp, u, v, index, v_size);
+      apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
       //apply_V(dt, gamma_1, gamma_2, utmp);
       apply_DAdjointinv(dt, utmp, utmp);
       apply_PhiAdjoint(dt, utmp);
@@ -357,10 +363,10 @@ int my_TriResidual(braid_App       app,
    
    
    apply_Dinv(dt, gtmp, gtmp);
-   apply_V(dt, gtmp, u, v, index, v_size);
+   apply_V(dt, gtmp, u, v, index, v_size, u_in, u_out);
    apply_DAdjointinv(dt, gtmp, gtmp);
    apply_Dinv(dt, g_othertemp, g_othertemp);
-   apply_V(dt, g_othertemp, u, v, index, v_size);
+   apply_V(dt, g_othertemp, u, v, index, v_size, u_in, u_out);
    apply_DAdjointinv(dt, g_othertemp, g_othertemp);
    vec_copy(1,g_othertemp,rtmp);
    vec_axpy(1, -1, gtmp, rtmp);
@@ -427,15 +433,38 @@ my_TriSolve(braid_App       app,
    braid_TriStatusGetTIndex(status, &index);
    double * input_u = app->input_u;
    double * input_v = app->input_v;
-   if (uright != NULL)
+   int v_size = app->ntime;
+   //if (uright != NULL)
+   //{
+   if (index > 0 && index < v_size - 1)
    {
-      rtmp[0] = input_v[index]/(dt * dt) + input_v[index+1]/(dt * dt) + input_u[index];
+      rtmp[0] = 1 / (dt) * (1/input_u[index - 1] + 1 / input_u[index]) 
+      + 1 / (dt) *(1 / input_u[index] + 1 / input_u[index + 1])
+      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
    }
+   //rtmp[0] = input_v[index]/(dt * dt) + input_v[index+1]/(dt * dt) + input_u[index];
+   
+   if (index == 0)
+   {
+      //rtmp[0] = 1 / (dt) *(1/app->u_in + 1/input_u[index]) +1/(dt) *(1/input_u[index] + 1/input_u[index + 1]);
+      rtmp[0] = 1 / (dt) * (1/u_in + 1 / u_in) 
+      + 1 / (dt) *(1 / input_u[index] + 1 / input_u[index + 1])
+      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
+   }
+      
+      /*if (index == v_size - 1)
+      {
+         rtmp[0] = 1/(dt) *(1/input_u[index - 1] + 1/input_u[index]) +1/(dt) *(1/input_u[index] + 1/app->u_out);
+      }*/
+   /*}
    else
    {
       /* At the rightmost point, use a different center coefficient approximation */
-      rtmp[0] = input_v[index]/(dt * dt) + input_u[index];
-   }
+      /*rtmp[0] = input_v[index]/(dt * dt) + input_u[index];
+      //rtmp[0] = input_v[index]/(dt * dt) + input_u[index];
+      rtmp[0] = 1 / (dt) * (1/input_u[index - 1] + 1 / input_u[index]) 
+         + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
+   }*/
 
    /* Complete residual update */
    vec_axpy(1, 1.0, utmp, (u->values));
@@ -466,10 +495,8 @@ my_Init(braid_App     app,
 
    //u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
    //u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
-   u->values[0] = 1;
-   u->values[sizeof(my_Vector)] = 2;
+   u->values[0] = 1; // just random value
    *u_ptr = u;
-
    return 0;
 }
 
@@ -566,21 +593,6 @@ my_Access(braid_App          app,
       vec_create(1, &(app->u[ii]));
       vec_copy(1, (u->values), (app->u[ii]));
    }
-
-//   {
-//      char  filename[255];
-//      FILE *file;
-//      int  iter;
-//      braid_AccessStatusGetIter(astatus, &iter);
-//
-//      braid_AccessStatusGetTIndex(astatus, &index);
-//      sprintf(filename, "%s.%02d.%04d.%03d", "trischur-ex-04.out", iter, index, app->myid);
-//      file = fopen(filename, "w");
-//      fprintf(file, "%1.14e, %1.14e\n", (u->values)[0], (u->values)[1]);
-//      fflush(file);
-//      fclose(file);
-//   }
-
    return 0;
 }
 
@@ -591,7 +603,7 @@ my_BufSize(braid_App           app,
            int                 *size_ptr,
            braid_BufferStatus  bstatus)
 {
-   *size_ptr = 2*sizeof(double);
+   *size_ptr = 1*sizeof(double);
    return 0;
 }
 
@@ -606,13 +618,12 @@ my_BufPack(braid_App           app,
    double *dbuffer = buffer;
    int i;
 
-   for(i = 0; i < 2; i++)
+   for(i = 0; i < 1; i++)
    {
       dbuffer[i] = (u->values)[i];
    }
 
-   braid_BufferStatusSetSize( bstatus,  2*sizeof(double));
-
+   braid_BufferStatusSetSize( bstatus,  sizeof(double));
    return 0;
 }
 
@@ -630,10 +641,10 @@ my_BufUnpack(braid_App           app,
 
    /* Allocate memory */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   u->values = (double*) malloc( 2*sizeof(double) );
+   u->values = (double*) malloc( sizeof(double) );
 
    /* Unpack the buffer */
-   for(i = 0; i < 2; i++)
+   for(i = 0; i < 1; i++)
    {
       (u->values)[i] = dbuffer[i];
    }
@@ -644,7 +655,7 @@ my_BufUnpack(braid_App           app,
 
 
 /*solves for e in H_p e = r*/
-void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
+void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, double u_in, double u_out){
    braid_Core  core;
    my_App     *app;
       
@@ -668,37 +679,40 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
    tol            = 1.0e-6;
    access_level   = 1;
    print_level    = 2;
-
    /* Set up twohe app structure */
    app = (my_App *) malloc(sizeof(my_App));
    app->myid     = rank;
    app->ntime    = ntime;
    app->u        = NULL;
-   
+   app->input_u = u;
+   app->input_v = v;
+   app->rhs = r;
    /* Initialize k, h, g vectors */
    double * k;
    double * h;
    double * g;
-   /* Initialive XBr-1aid */
    vec_create(v_size-1, &k);
    vec_create(v_size, &h);
    vec_create(v_size, &g);
    extract(r, k, h, g, v_size);
+   /* Initialize XBr-1aid */
    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
                       my_BufSize, my_BufPack, my_BufUnpack, &core);
-
+ 
    /* Set some XBraid(_Adjoint) parameters */
    braid_SetMaxLevels(core, max_levels);
    braid_SetMinCoarse(core, min_coarse);
    braid_SetNRelax(core, -1, nrelax);
+  
    if (max_levels > 1)
    {
       braid_SetNRelax(core, max_levels-1, nrelaxc); /* nrelax on coarsest level */
    }
    braid_SetCFactor(core, -1, cfactor);
    braid_SetAccessLevel(core, access_level);
+
    braid_SetPrintLevel( core, print_level);       
    braid_SetMaxIter(core, maxiter);
    braid_SetAbsTol(core, tol);
@@ -706,38 +720,41 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
 
-   
+
 
    /*   Compute control v and adjoint w from x */
    double * out_u;
-   double * out_v, * out_vtmp, * w, * wtmp, *gtmp, *htmp;
-   vec_create(app->npoints, &w);
+   double * out_v, * out_vtmp, * out_w, *w, * wtmp, *gtmp, *htmp;
+   vec_create(app->ntime, &w);
    vec_create(1, &wtmp);
    vec_create(v_size, &gtmp);
    vec_create(v_size, &out_v);
+   vec_create(v_size, &out_w);
    vec_create(1, &out_vtmp);
    vec_create(1, &htmp);
    vec_create(v_size - 1, &out_u);
 
-   for(int i = 0; i < app->npoints; i++)
+   for(int i = 0; i < app->ntime; i++)
    {
       /* Compute Lu */
-      double **out_u = (app->u);
+      double **app_u = app->u;
       wtmp[0] = 0.0;
       if (i != 0)
       {
-         vec_axpy(1, -1, out_u[i-1], wtmp);
+         vec_axpy(1, -1, app_u[i-1], wtmp);
       }
-      if ( i != npoints - 1 )
+      if ( i != app->ntime - 1 )
       {
-         vec_axpy(1, 1, out_u[i], wtmp);
+         //out_u[i] = app_u[i];
+         vec_axpy(1, 1, app_u[i], wtmp);
       }
 
-      /* subtract from g bar  */
+      /* wtmp = ( g - Lu )  */
       gtmp[0] = g[i];
-      vec_axpy(1, -1, wtmp, gtmp);
+      vec_axpy(1, -1, gtmp, wtmp);
+      vec_scale(1, -1.0, wtmp);
 
-      /* D^{-1} (g - Lu) */
+      /* wtmp = D^{-1} (g - Lu) */
       apply_Dinv(dt, wtmp, wtmp);
       vec_copy(1, wtmp, out_vtmp);
 
@@ -745,31 +762,29 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size){
       out_v[i] = -out_vtmp[0];
 
       /* D^{-T} V D^{-1} (g - Lu) */
-      apply_V(dt, wtmp, u, v, i, app->npoints);
+      apply_V(dt, wtmp, u, v, i, app->ntime, u_in, u_out);
       apply_DAdjointinv(dt, wtmp, wtmp);
 
       /* D^{-T} h  */
-      vec_copy(1, wtmp, out_vtmp);
       htmp[0] = h[i];
       apply_DAdjointinv(dt, htmp, htmp);
       vec_axpy(1, 1, htmp, wtmp);
-      w[i] = -wtmp[0];
+      out_w[i] = -wtmp[0];
    }
 
-   merge(e, out_u, out_v, w, v_size);
+   merge(e, out_u, out_v, out_w, v_size);
 
-   for (int i = 0; i < (app->npoints); i++)
+   for (int i = 0; i < (app->ntime); i++)
    {
       free(app->u[i]);
    }
    free(app->u);
    free(app);
    braid_Destroy(core);
-   MPI_Finalize();
 }
 
 /*Given  x, Computes Hx*/
-void ApplyH(double *u, double *v, double dt, double *x, double *Hx, int n){
+void ApplyH(double *u, double *v, double dt, double *x, double *Hx, int n, double u_in, double u_out){
    double * utmp;
    double * vtmp;
    double * wtmp;
@@ -815,7 +830,7 @@ void ApplyH(double *u, double *v, double dt, double *x, double *Hx, int n){
 
       // + V*v
       vtmp[0]=0.0;
-      apply_V(dt,vtmp,u,v,i,n);
+      apply_V(dt,vtmp,u,v,i,n, u_in, u_out);
       rtmp[0] += vtmp[0]*vOfx[i];
 
       // - D^T*w
@@ -862,20 +877,41 @@ double quick_norm(double *v, int n){
 void applyF(double *u, double *v, double *w, double *g, double *Fx, double dt, int n){
    double *utmp, *vtmp, *wtmp; 
    
+   /*Julia Code
+       fu = zeros(nc-1)
+    for i = 1:nc-1
+        fu[i] = -(dt/2)*(v[i]^2 + v[i+1]^2)/(u[i]^2)  #(54)
+    end
+    fu = fu + L'*w
+    */
    vec_create(n-1, &utmp);
    for (int i = 0; i < n-1; i++){
       utmp[i] = -(dt/2) * (v[i]*v[i] + v[i+1]*v[i+1]) / (u[i]*u[i]) + (w[i]-w[i+1]);
    }
-   vec_copy(n-1, utmp, u);
    
+   /* Julia Code
+       # Apply KKT gradient-v block equations   #(55)
+    fv = zeros(nc)
+    fv[1] = dt*(1/uin + 1/u[1])*v[1]
+    for i = 2:nc-1
+        fv[i] = dt*(1/u[i-1] + 1/u[i])*v[i]
+    end
+    fv[nc] = dt*(1/u[nc-1] + 1/uout)*v[nc]
+    fv = fv - D'*w
+   */
    vec_create(n, &vtmp);
    for (int i = 0; i < n; i++){
-      double ulm2 = i==0? 1/(g[0]*g[0]) : 1/(u[i-1]*u[i-1]);
-      double urm2 = i==n-1? 1/(g[n-1]*g[n-1]) : 1/(u[i]*u[i]);
+      double ulm2 = ( i==0? 1.0/u_in : 1.0/u[i-1] );
+      double urm2 = ( i==n-1? 1.0/u_out : 1.0/u[i] );
       vtmp[i] = dt * (ulm2 + urm2) * v[i] + dt*w[i];
    }
-   vec_copy(n, vtmp, v);
 
+   /* Julia Code
+    # Apply KKT gradient-w block equations
+    fw = L*u - D*v
+    fw[1]  = fw[1]  - uin
+    fw[nc] = fw[nc] + uout
+   */
    vec_create(n, &wtmp);
    for (int i = 0; i < n; i++){
       wtmp[i] = 0;
@@ -883,7 +919,6 @@ void applyF(double *u, double *v, double *w, double *g, double *Fx, double dt, i
       if(i != 0) wtmp[i] -= u[i-1];
       wtmp[i] += dt*v[i]-g[i];
    }
-   vec_copy(n, wtmp, w);
 
    merge(Fx, utmp, vtmp, wtmp, n);
    vec_destroy(utmp);
@@ -893,7 +928,7 @@ void applyF(double *u, double *v, double *w, double *g, double *Fx, double dt, i
  
 
 /* Apply Jac[F(x)]^-1*/
-void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n){
+void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n, double u_in, double u_out){
    double *dx, *r, *e, *Hdx;
    vec_create(3*n-1, &dx);
    vec_create(3*n-1, &r);
@@ -902,10 +937,9 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n){
 
    double rtol = 1e-3;
    int max_itr = 2;
-
    //compute the first residual   
    vec_copy(3*n-1, Fx, r);
-   ApplyH(u, v, dt, dx, Hdx, n);
+   ApplyH(u, v, dt, dx, Hdx, n, u_in, u_out);
    vec_axpy(3*n-1, -1.0, Hdx, r);   
 
    double rnorm0 = quick_norm(r,3*n-1);
@@ -915,15 +949,14 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n){
       /*one iteration carries out dx = dx + Hp^-1*(Fx-H*dx)*/
       // r <- Fx-H*dx
       vec_copy(3*n-1, Fx, r);
-      ApplyH(u, v, dt, dx, Hdx, n);
+      ApplyH(u, v, dt, dx, Hdx, n, u_in, u_out);
       vec_axpy(3*n-1, -1.0, Hdx, r);  
 
       // e <- Hp^-1 * r     
-      solveHp(e, r, u, v, dt, n);
+      solveHp(e, r, u, v, dt, n, u_in, u_out);
       // dx <- dx + e
       vec_axpy(3*n-1, 1.0, e, dx);
       itr++;
-
       rnrel = quick_norm(r,3*n-1) / rnorm0;
       printf("    linear iter = %d, rnrel = % 1.14e\n", itr, rnrel);
    }
@@ -938,21 +971,14 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n){
  * Main driver
  *--------------------------------------------------------------------------*/
 
-int main(int argc_, char *argv_[])
+int main(int argc, char *argv[])
 {
-   argc = argc_;
-   argv = argv_;
    double dt;
    int ntime, max_newton_iter;
    int rank;
    int xsize;
    double * x, * y, *u, * v, *w, *g ;
-   vec_create(xsize, &x);
-   vec_create(xsize, &y);
-   vec_create(ntime - 1, &u);
-   vec_create(ntime, &v);
-   vec_create(ntime, &w);
-   vec_create(ntime, &g);
+  
 
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
@@ -966,6 +992,13 @@ int main(int argc_, char *argv_[])
 /*  maximum iterations of Newton's method */
    max_newton_iter = 10;
    
+   /* create vectors */
+   vec_create(xsize, &x);
+   vec_create(xsize, &y);
+   vec_create(ntime - 1, &u);
+   vec_create(ntime, &v);
+   vec_create(ntime, &w);
+   vec_create(ntime, &g);
    //initialize g
    for(int i = 0; i < ntime; i++)
    {
@@ -980,13 +1013,14 @@ int main(int argc_, char *argv_[])
    u_in = 1.0;
    u_out = 2.0;
    g[0] = u_in;
-   g[ntime-1] = -u_out;
+   g[ntime-1] -= u_out;
+
 
    //get dt
    dt = (tstop - tstart)/ntime;
 
    //initialize x vector to all 1's
-   for(int i = 0; i < ntime; i++)
+   for(int i = 0; i < xsize; i++)
    {
       x[i]=1;
    }
@@ -1001,278 +1035,18 @@ int main(int argc_, char *argv_[])
    {
       //apply Jacobian inverse
       //  x <- x - Jac(F(x))^{-1} * F(x)
-      ApplyJacFxInv(y, u, v, dt, ntime);
+      ApplyJacFxInv(y, u, v, dt, ntime, u_in, u_out);
       vec_axpy(xsize, -1.0, y, x);
 
       //apply F to x after extracting u, v, w, store in
       extract(x,  u, v, w, ntime);
       applyF(u, v, w, g, y, dt, ntime);
-
       ++iter;
       ynrel = quick_norm(y, xsize) / ynorm0;
       printf("iter = %d, fnrel = % 1.14e\n", iter, ynrel);
    }
+   MPI_Finalize();
+}
 
    //    braid_Core  core;
-//    my_App     *app;
-//    double      tstart, tstop, dt; 
-//    int         rank, ntime, arg_index;
-//    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter, max_newton_iter;
-//    int         access_level, print_level;
-//    double      tol;
-
-//    /* Initialize MPI */
-//    MPI_Init(&argc, &argv);
-//    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-//    /* Define time domain */
-//    ntime  = 20;              /* Total number of time-steps */
-//    tstart = 0.0;             /* Beginning of time domain */
-//    tstop  = 1.0;             /* End of time domain*/
-
-//    /* Define some Braid parameters */
-//    max_levels     = 30;
-//    min_coarse     = 1;
-//    nrelax         = 1;
-//    nrelaxc        = 7;
-//    max_newton_iter    = 20;
-//    maxiter        = 20;
-//    cfactor        = 2;
-//    tol            = 1.0e-6;
-//    access_level   = 1;
-//    print_level    = 2;
-
-//    /* Give some initial conditions */
-
-
-//    /* Parse command line */
-//    arg_index = 1;
-//    while (arg_index < argc)
-//    {
-//       if ( strcmp(argv[arg_index], "-help") == 0 )
-//       {
-//          printf("\n");
-//          printf(" Solves a simple optimal control problem in time-serial on [0, 1] \n\n");
-//          printf("  min   \\int_0^1 u_1(t)^2 + u_2(t)^2 + gamma_1 c_1(t)^2 + gamma_2 c_2(t)^2 dt \n\n");
-//          printf("  s.t.  d/dt u_1(t) = u_2(t) \n");
-//          printf("        d/dt u_2(t) = -u_2(t) + c(t) \n\n");
-//          printf("  -tstop <tstop>          : Upper integration limit for time\n");
-//          printf("  -ntime <ntime>          : Num points in time\n");
-//          printf("  -ml <max_levels>        : Max number of braid levels \n");
-//          printf("  -nu  <nrelax>           : Num F-C relaxations\n");
-//          printf("  -nuc <nrelaxc>          : Num F-C relaxations on coarsest grid\n");
-//          printf("  -mi <max_newton_iter>           : Max iterations \n");
-//          printf("  -cf <cfactor>           : Coarsening factor \n");
-//          printf("  -tol <tol>              : Stopping tolerance \n");
-//          printf("  -access <access_level>  : Braid access level \n");
-//          printf("  -print <print_level>    : Braid print level \n");
-//          printf("\n");
-//          exit(1);
-//       }
-//       else if ( strcmp(argv[arg_index], "-ntime") == 0 )
-//       {
-//          arg_index++;
-//          ntime = atoi(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-tstop") == 0 )
-//       {
-//          arg_index++;
-//          tstop = atof(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-ml") == 0 )
-//       {
-//          arg_index++;
-//          max_levels = atoi(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-nu") == 0 )
-//       {
-//          arg_index++;
-//          nrelax = atoi(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-nuc") == 0 )
-//       {
-//          arg_index++;
-//          nrelaxc = atoi(argv[arg_index++]);
-//       }
-//       else imp(argv[arg_index], "-mi") == 0 )
-//       {
-//        else if ( strcmp(argv[arg_index], "-mni") == 0 )
-//       {
-//          arg_index++;
-//          max_newton_iter = atoi(argv[arg_index++]);
-//       }
-//          arg_index++;
-//          max_newton_iter = atoi(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-cf") == 0 )
-//       {
-//          arg_index++;
-//          cfactor = atoi(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-tol") == 0 )
-//       {
-//          arg_index++;
-//          tol = atof(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-access") == 0 )
-//       {
-//          arg_index++;
-//          access_level = atoi(argv[arg_index++]);
-//       }
-//       else if ( strcmp(argv[arg_index], "-print") == 0 )
-//       {
-//          arg_index++;
-//          print_level = atoi(argv[arg_index++]);
-//       }
-//       else
-//       {
-//          printf("ABORTING: incorrect command line parameter %s\n", argv[arg_index]);
-//          return (0);
-//       }
-//    }
-
-//    /* Solve adjoint equations starting at time point t1=dt, recognizing that
-//     * braid will label this time point as index=0 instead of 1 */
-//    dt = (tstop-tstart)/ntime;
-
-//    /* Set up twohe app structure */
-//    app = (my_App *) malloc(sizeof(my_App));
-//    app->myid     = rank;
-//    app->ntime    = ntime;
-//    app->u        = NULL;
-   
-//    /* Initialize XBraid */
-//    braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
-//                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
-//                       my_Sum, my_SpatialNorm, my_Access,
-//                       my_BufSize, my_BufPack, my_BufUnpack, &core);
-
-//    /* Set some XBraid(_Adjoint) parameters */
-//    braid_SetMaxLevels(core, max_levels);
-//    braid_SetMinCoarse(core, min_coarse);
-//    braid_SetNRelax(core, -1, nrelax);
-//    if (max_levels > 1)
-//    {
-//       braid_SetNRelax(core, max_levels-1, nrelaxc); /* nrelax on coarsest level */
-//    }
-// Newton_n   braid_SetCFactor(coreewton_, -1, cfactor);
-//    braid_SetAccessLevel(core, access_level);
-//    braid_SetPrintLevel( core, print_level);       
-//    braid_SetMaxIter(core, maxiter);
-//    braid_SetAbsTol(core, tol);
-
-//    /* Parallel-in-time TriMGRIT simulation */
-//    braid_Drive(core);
-
-//    if (access_level > 0)
-//    {
-//       char  filename[255];
-//       FILE *file;
-//       int   i, index;
-
-//       /* Print state u to file */
-//       {
-//          sprintf(filename, "%s.%03d", "trischur-transport-0d-state.out.u", (app->myid));
-//          file = fopen(filename, "w");
-//          for (i = 0; i < (app->npoints); i++)
-//          {
-//             double **u = (app->u);
-
-//             index = (app->ilower) + i + 1;
-//             fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, u[i][0], u[i][1]);
-//          }
-//          fflush(file);
-//          fclose(file);
-//       }
-
-//       /* Compute adjoint w from u and print to file */
-//       /* ZTODO: This requires communication to do correctly */
-//       // {
-//       //    double *u;
-
-//       //    sprintf(filename, "%s.%03d", "trischur-trasport-0d-state.out.u", (app->myid));
-//       //    file = fopen(filename, "w");
-//       //    vec_create(1, &u);
-//       //    for (i = 0; i < (app->npoints); i++)
-//       //    {
-//       //       double **u = (app->u);
-
-//       //       if ((i+1) < (app->npoints))
-//       //       {
-//       //          vec_copy(1, w[i+1], u);
-//       //          apply_PhiAdjoint(dt, u);
-//       //          vec_axpy(1, -1.0, w[i], u);
-//       //       }
-//       //       else
-//       //       {
-//       //          vec_copy(1, w[i], u);
-//       //          vec_scale(1, -1.0, u);
-//       //       }
-//       //       apply_Uinv(dt, u);
-
-//       //       index = (app->ilower) + i + 1;
-//       //       fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, u[0], u[1]);
-//       //    }
-//       //    vec_destroy(u);
-//       //    fflush(file);
-//       //    fclose(file);
-//       // }
-
-//       /* Compute control v from state u and print to file */
-//       // {
-//       //    double *v;
-//       //    double * utmp;
-//       //    double **u = (app->u);
-//       //    vec_create(1,&utmp);
-
-//       //    sprintf(filename, "%s.%03d", "trischur-transport-0d-state.out.v", (app->myid));
-//       //    file = fopen(filename, "w");
-//       //    vec_create(1, &v);
-//       //    for (i = 0; i < (app->npoints); i++)
-//       //    {
-//       //       if (i > 0)
-//       //       {
-//       //          vec_copy(1, u[i-1], v);
-//       //          apply_Phi(dt, v);
-//       //          vec_scale(1, -1, v);
-//       //          vec_axpy(1, 1.0, u[i], v);
-//       //       }
-//       //       else
-//       //       {
-//       //          vec_copy(1, u[i], v);
-//       //       }
-//       //       //apply_Phi(dt, v);
-//       //       //vec_scale(1, -1.0, v);
-//       //         /* Subtract g */
-//       //       if (i == 0)
-//       //       {
-//       //          /* rtmp = rtmp + g; g = Phi_0 u_0 */   
-//       //          utmp[0] =  0.0;
-//       //          utmp[1] = -1.0;
-//       //          apply_Phi(dt, utmp);
-//       //          vec_axpy(1, -1.0, utmp, v);
-//       //       }
-//       //       apply_Dinv(dt, v, v);
-//       //       index = (app->ilower) + i + 1;
-//       //       fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, v[0], v[1]);
-//       //    }
-//       //    vec_destroy(v);
-//       //    fflush(file);
-//       //    fclose(file);
-
-//       //    for (i = 0; i < (app->npoints); i++)
-//       //    {
-//       //       free(app->u[i]);
-//       //    }
-//       //    free(app->u);
-//       // }
-
-//    }
-
-//    free(app);
-   
-//    braid_Destroy(core);
-//    MPI_Finalize();
-
-//    return (0);
-}//
+//  
