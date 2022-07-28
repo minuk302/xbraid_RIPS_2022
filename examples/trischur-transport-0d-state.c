@@ -183,15 +183,16 @@ apply_PhiAdjoint(double dt, double *w)
 void
 apply_U(double dt, double *jm, double *u, double * v, int index)
 {
-   jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
-   /*if (index < v_size - 1) 
+   //jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
+   //if (index < v_size - 1) 
+   if (index < 19) 
    {
       jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
    }
    else
    {
       jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u_out * u_out * u_out);
-   }*/
+   }
 }
 
 /*------------------------------------*/
@@ -304,12 +305,12 @@ int my_TriResidual(braid_App       app,
 
    /* rtmp = rtmp + D_i^-T V_i D_i^-1 u */
    vec_copy(1, (r->values), utmp);
+   printf("\nthis??\n %d %f", index, utmp[0]);
    apply_Dinv(dt, utmp, utmp);
    apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
    //apply_V(dt, gamma_1, gamma_2, utmp);
    apply_DAdjointinv( dt, utmp, utmp);
    vec_axpy(1, 1.0, utmp, rtmp);
-
    /* rtmp = rtmp + Phi_{i+1}^T D_{i+1}^{-T} V_{i+1} D_{i+1}^{-1} Phi_{i+1} u */
    /* This term is zero at time 0, since Phi_0 = 0 */
    if (uright != NULL)
@@ -323,12 +324,13 @@ int my_TriResidual(braid_App       app,
       apply_PhiAdjoint(dt, utmp);
       vec_axpy(1, 1.0, utmp, rtmp);
    }
-
+   printf("\nthis1??\n %d %f", index, utmp[0]);
    /* Compute action of west block */
    if (uleft != NULL)
    {
       /* rtmp = rtmp - D_i^{-T} V_i D_i^{-1} Phi_i uleft */
       vec_copy(1, (uleft->values), utmp);
+      printf("\nthis??\n %d %f", index, utmp[0]);
       apply_Phi(dt, utmp);
       apply_Dinv(dt, utmp, utmp);
       apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
@@ -336,12 +338,13 @@ int my_TriResidual(braid_App       app,
       apply_DAdjointinv(dt, utmp, utmp);
       vec_axpy(1, -1.0, utmp, rtmp);
    }
-   
+   printf("\nthis2??\n %d %f", index, utmp[0]);
    /* Compute action of east block */
    if (uright != NULL)
    {
       /* rtmp = rtmp - Phi_{i+1}^T D_{i+1}^{-T} V_{i+1} D_{i+1}^{-1} uright */
       vec_copy(1, (uright->values), utmp);
+      printf("\nthis4??\n %d %f", index, utmp[0]);
       apply_Dinv(dt, utmp, utmp);
       apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
       //apply_V(dt, gamma_1, gamma_2, utmp);
@@ -349,6 +352,7 @@ int my_TriResidual(braid_App       app,
       apply_PhiAdjoint(dt, utmp);
       vec_axpy(1, -1.0, utmp, rtmp);
    }
+   printf("\nthis3??\n %d %f", index, utmp[0]);
    /* subtract rhs kbar (add -k - L^T D^{-T} V D^{-1} g - L^T D^{-T} h */
    htmp[0] = h[index];
    h_othertemp[0] = h[index+1];
@@ -379,6 +383,7 @@ int my_TriResidual(braid_App       app,
    vec_copy(1, rtmp, (r->values));
    }
    /* Destroy temporary vectors */
+   printf("\n\n is it triresidual??? \n %d %f %f", index, rtmp[0], utmp[0]);
    vec_destroy(rtmp);
    vec_destroy(utmp);
    
@@ -667,7 +672,7 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, 
    /* rank should not matter */
    rank = 2;
    /* Define time domain */
-   ntime  = 20;              /* Total number of time-steps */
+   ntime  = v_size;              /* Total number of time-steps */
 
    /* Define some Braid parameters */
    max_levels     = 30;
@@ -720,12 +725,10 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, 
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
 
-
-
    /*   Compute control v and adjoint w from x */
    double * out_u;
    double * out_v, * out_vtmp, * out_w, *w, * wtmp, *gtmp, *htmp;
-   vec_create(app->ntime, &w);
+   vec_create(ntime, &w);
    vec_create(1, &wtmp);
    vec_create(v_size, &gtmp);
    vec_create(v_size, &out_v);
@@ -733,31 +736,38 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, 
    vec_create(1, &out_vtmp);
    vec_create(1, &htmp);
    vec_create(v_size - 1, &out_u);
-
-   for(int i = 0; i < app->ntime; i++)
+   double **app_u;
+   for(int i = 0; i < ntime; i++)
    {
+      
+      //printf("\n\n\n %d\n", i);
       /* Compute Lu */
-      double **app_u = app->u;
+      app_u = app->u;
       wtmp[0] = 0.0;
+      //printf("\n %f", wtmp[0]);
+      //printf("\n %f", app_u[1000]);
+
       if (i != 0)
       {
          vec_axpy(1, -1, app_u[i-1], wtmp);
+         //printf("\n what the heckin %f", app_u[i-1][0]);
       }
       if ( i != app->ntime - 1 )
       {
-         //out_u[i] = app_u[i];
          vec_axpy(1, 1, app_u[i], wtmp);
+         //printf("\n what the heckin %f", app_u[i][0]);
       }
+      //printf("\n %f", wtmp[0]);
 
       /* wtmp = ( g - Lu )  */
       gtmp[0] = g[i];
       vec_axpy(1, -1, gtmp, wtmp);
       vec_scale(1, -1.0, wtmp);
-
+      //printf("\n %f", wtmp[0]);
       /* wtmp = D^{-1} (g - Lu) */
       apply_Dinv(dt, wtmp, wtmp);
       vec_copy(1, wtmp, out_vtmp);
-
+      //printf("\n %f", wtmp[0]);
       /* v is D^{-1} (g - Lu) */
       out_v[i] = -out_vtmp[0];
 
@@ -770,8 +780,12 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, 
       apply_DAdjointinv(dt, htmp, htmp);
       vec_axpy(1, 1, htmp, wtmp);
       out_w[i] = -wtmp[0];
+      if(i < v_size - 1)
+      {
+         out_u[i] = app_u[i][0];
+      }
    }
-
+   
    merge(e, out_u, out_v, out_w, v_size);
 
    for (int i = 0; i < (app->ntime); i++)
@@ -935,12 +949,20 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n, double u_
    vec_create(3*n-1, &e);
    vec_create(3*n-1, &Hdx);
 
+   for(int i = 0; i < 3 * n- 1; i++)
+   {
+      dx[i] = 0;
+      e[i] = 0;
+      Hdx[i] = 0;
+      r[i] = 0;
+   }
+
    double rtol = 1e-3;
    int max_itr = 2;
    //compute the first residual   
    vec_copy(3*n-1, Fx, r);
    ApplyH(u, v, dt, dx, Hdx, n, u_in, u_out);
-   vec_axpy(3*n-1, -1.0, Hdx, r);   
+   vec_axpy(3*n-1, -1.0, Hdx, r);
 
    double rnorm0 = quick_norm(r,3*n-1);
    double rnrel  = 1.0;
@@ -952,8 +974,11 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n, double u_
       ApplyH(u, v, dt, dx, Hdx, n, u_in, u_out);
       vec_axpy(3*n-1, -1.0, Hdx, r);  
 
-      // e <- Hp^-1 * r     
       solveHp(e, r, u, v, dt, n, u_in, u_out);
+      for ( int i = 0; i < 59; ++i )
+      {
+         printf("%d %d: % 1.14e\n", itr, i+1, e[i]);
+      }
       // dx <- dx + e
       vec_axpy(3*n-1, 1.0, e, dx);
       itr++;
@@ -1014,7 +1039,6 @@ int main(int argc, char *argv[])
    u_out = 2.0;
    g[0] = u_in;
    g[ntime-1] -= u_out;
-
 
    //get dt
    dt = (tstop - tstart)/ntime;
