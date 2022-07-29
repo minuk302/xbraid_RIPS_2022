@@ -62,15 +62,13 @@ typedef struct _braid_App_struct
    int      ilower;      /* Lower index for my proc */
    int      iupper;      /* Upper index for my proc */
    int      npoints;     /* Number of time points on my proc */
-   double **u;           /* Adjoing vectors at each time point on my proc */
-   double *input_u;      /* current u  */
-   double *input_v;     /* current v */
-   double *rhs;         /* rhs */
+   double **u;           /* State vectors at each time point on my proc */
+   double *diag_U;      /* current u  */
+   double *diag_V;     /* current v */
+   double *k_bar;         /* rhs */
 } my_App;
 
-double u_in = 0;
-double u_out = 0;
-double tstart, tstop;
+
 
 /* Define the state vector at one time-step */
 typedef struct _braid_Vector_struct
@@ -166,128 +164,78 @@ void merge(double *r, double *k, double *h, double *g, int v_size){
  * KKT component routines
  *--------------------------------------------------------------------------*/
 
-void
-apply_Phi(double dt, double *u)
-{
+void applyLAdjoint(int size, double *x, double *LTx){
+    for (int i = 0; i < size-1; i++)
+    {
+        LTx[i] = x[i] - x[i+1];
+    }
 }
 
-/*------------------------------------*/
-
-void
-apply_PhiAdjoint(double dt, double *w)
-{
+void vec_set(int size, double v, double *x){
+    for (int i = 0; i < size; i++)
+    {
+        x[i]=v;
+    }
 }
 
-/*------------------------------------*/
-//apply_U(dt, utmp, u, v, index);
-void
-apply_U(double dt, double *jm, double *u, double * v, int index)
-{
-   jm[0] *= dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
-   //if (index < v_size - 1) 
-   //{
-   //   jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u[index] *u[index] * u[index] );
-   //}
-   //else
-   //{
-   //   jm[0] = dt * (v[index] * v[index] + v[index+1] * v[index+1])/(u_out * u_out * u_out);
-   //}
+void applyL(int size, double *x, double *Lx){
+    vec_set(size, 0, Lx);
+    for (int i = 0; i < size-1; i++)
+    {
+        Lx[i] += x[i];
+        Lx[i+1] -= x[i];
+    }
 }
 
-/*------------------------------------*/
-/* apply_V(dt, INSERT MATRIX HERE, u, v, INSERT INDEX HERE);*/
-void
-apply_V(double dt, double * rob, double *u, double *v, int index, int v_size, double u_in, double u_out)
-{
-   if (index == 0)
-   {
-      rob[0] *=  dt * (1/ u_in + 1/u[0]);
-   }
-   if (index == v_size - 1)
-   {
-      rob[0] *=  dt * (1/ u_out + 1/u[index-1]);
-   }
-   if (index != 0 && index != v_size - 1)
-   {
-      rob[0] *=  dt * (1/u[index-1]+1/u[index]);
-   }
+void applyDiag(int size, double *D, double *x){
+    for (int i = 0; i < size; i++)
+    {
+        x[i] = D[i] * x[i];
+    }
 }
 
-/*------------------------------------*/
-
-/* Maps v to w (which may be the same pointer) */
-void
-apply_D(double dt, double *v, double *w)
-{
-   w[0] = -v[0]*dt; 
+void applyB(int size, double *u, double *v, double *x, double *ret, double dt){
+    vec_set(size, 0, ret);
+    for (int i = 0; i < size-1; i++)
+    {
+        ret[i] += -dt*x[i]*v[i]/(u[i]*u[i]);
+        ret[i+1] += -dt*x[i]*v[i+1]/(u[i]*u[i]);
+    }
 }
 
-void
-apply_DAdjoint(double dt, double *v, double *w)
-{
-   w[0] = -v[0]*dt; 
-}
-
-void
-apply_Dinv(double dt, double *v, double *w)
-{
-   w[0] = -v[0]/dt; 
-}
-
-/*------------------------------------*/
-
-/* Maps w to v (which may be the same pointer) */
-void
-apply_DAdjointinv(double dt, double *w, double *v)
-{
-   double wtmpone = w[0];
-   v[0] = -wtmpone/dt; 
+void applyBAdjoint(int size, double *u, double *v, double *x, double *ret, double dt){
+    for (int i = 0; i < size-1; i++)
+    {
+        ret[i] = -dt * (v[i]*x[i] + v[i+1]*x[i+1]) / (u[i] * u[i]);
+    }
 }
 
 
-/* -------------------------------------------
+/*--------------------------------------------------------------------------
  * TriMGRIT wrapper routines
  *--------------------------------------------------------------------------*/
 
-/* Compute A(u) - f */
+/* Compute A(u) - \bar{k} - f */
 
 int my_TriResidual(braid_App       app,
-               braid_Vector    uleft,
-               braid_Vector    uright,
-               braid_Vector    f,
-               braid_Vector    r,
-               braid_TriStatus status)
+                   braid_Vector    uleft,
+                   braid_Vector    uright,
+                   braid_Vector    f,
+                   braid_Vector    r,
+                   braid_TriStatus status)
 {
    double  t, tprev, tnext, dt;
-   double *rtmp, *utmp, *htmp, *h_othertemp, *gtmp, *ktmp, *g_othertemp, *u, *v;
-   double  *k, *h, *g;
    int     level, index;
-   int v_size = app->ntime + 1;
-   vec_create(v_size - 1, &u);
-   vec_create(v_size, &v);
-   vec_copy(v_size - 1, app->input_u, u);
-   vec_copy(v_size, app->input_v, v);
 
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
    braid_TriStatusGetTIndex(status, &index);
-   if (index == 0 || index == 19 )
-   {
-      printf("index is %d: %d\n", index, level);
-   
 
-   if ( uleft == NULL )
-   {
-      printf("uleft is null, idx:%d\n", index);
-   }
-   }
+   double *diag_U = (app->diag_U);
+   double *diag_V = (app->diag_V);
+   double *k_bar = (app->k_bar);
+//    int n = (app->npoints);
    
-   /* extract k, h, g from res */
-   vec_create(v_size -1, &k);
-   vec_create(v_size , &h);
-   vec_create(v_size , &g);
-   extract(app->rhs, k, h, g, v_size);
-
    /* Get the time-step size */
    if (t < tnext)
    {
@@ -298,124 +246,59 @@ int my_TriResidual(braid_App       app,
       dt = t - tprev;
    }
 
-   /* Create temporary vectors */
+   double *rtmp;
    vec_create(1, &rtmp);
-   vec_create(1, &utmp);
-   vec_create(1, &h_othertemp);
-   vec_create(1, &gtmp);
-   vec_create(1, &htmp);
-   vec_create(1, &ktmp);
-   vec_create(1, &g_othertemp);
 
-   /* rtmp = U_i u */
-   vec_copy(1, (r->values), utmp);
-   //apply_U(dt, utmp);
-   apply_U(dt, utmp, u, v, index);
-   vec_copy(1, utmp, rtmp);
-   printf("\n%d test 1: %f \n", index, rtmp[0]);
-   /* rtmp = rtmp + D_i^-T V_i D_i^-1 u */
-   vec_copy(1, (r->values), utmp);
-   //printf("\n%d test 1.1: %f \n", index, utmp[0]);
-   apply_Dinv(dt, utmp, utmp);
-   //printf("\n%d test 1.2: %f \n", index, utmp[0]);
-   apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
-   //printf("\n%d test 1.3: %f \n", index, utmp[0]);
-   apply_DAdjointinv( dt, utmp, utmp);
-   //printf("\n%d test 1.4: %f \n", index, utmp[0]);
-   vec_axpy(1, 1.0, utmp, rtmp);
-   printf("\n%d test 1.5: %f \n", index, utmp[0]);
-  // printf("test 2: %f \n", rtmp[0]);
-   /* rtmp = rtmp + Phi_{i+1}^T D_{i+1}^{-T} V_{i+1} D_{i+1}^{-1} Phi_{i+1} u */
-   /* This term is zero at time 0, since Phi_0 = 0 */
-   //if (uright != NULL)
-   //{
-      vec_copy(1, (r->values), utmp);
-      apply_Phi(dt, utmp);
-      apply_Dinv(dt, utmp, utmp);
-      apply_V(dt, utmp, u, v, index+1, v_size, u_in, u_out);
-      apply_DAdjointinv(dt, utmp, utmp);
-      apply_PhiAdjoint(dt, utmp);
-      vec_axpy(1, 1.0, utmp, rtmp);
-   //}
-   printf("test 3: %f \n", rtmp[0]);
+   /* Fake equation - no need to even compute anything here - just set residual to zero */
+   if (index == 0)
+   {
+      rtmp[0] = 0.0;
+      vec_copy(1, rtmp, (r->values));
+      return 0;
+   }
+    
+   /* Compute action of center block */
+   double uc = (r->values)[0];
+   double rez = (dt*diag_U[index] + 1 / dt *(diag_V[index] + diag_V[index+1]))*uc;
 
    /* Compute action of west block */
-   if (uleft != NULL)
+   if (index > 1)
    {
-      /* rtmp = rtmp - D_i^{-T} V_i D_i^{-1} Phi_i uleft */
-      vec_copy(1, (uleft->values), utmp);
-      //printf("test 3.1: %f \n", utmp[0]);
-      apply_Phi(dt, utmp);
-      //printf("test 3.2: %f \n", utmp[0]);
-      apply_Dinv(dt, utmp, utmp);
-      //printf("test 3.3: %f \n", utmp[0]);
-      apply_V(dt, utmp, u, v, index, v_size, u_in, u_out);
-      //printf("test 3.4: %f \n", utmp[0]);
-      apply_DAdjointinv(dt, utmp, utmp);
-     // printf("test 3.5: %f \n", utmp[0]);
-      vec_axpy(1, -1.0, utmp, rtmp);
+      double ul = (uleft->values)[0];
+      rez -= 1 / dt * diag_V[index]*ul;
    }
-   printf("test 4: %f \n", rtmp[0]);
    
    /* Compute action of east block */
    if (uright != NULL)
    {
-      /* rtmp = rtmp - Phi_{i+1}^T D_{i+1}^{-T} V_{i+1} D_{i+1}^{-1} uright */
-      vec_copy(1, (uright->values), utmp);
-      apply_Dinv(dt, utmp, utmp);
-      apply_V(dt, utmp, u, v, index+1, v_size, u_in, u_out);
-      apply_DAdjointinv(dt, utmp, utmp);
-      apply_PhiAdjoint(dt, utmp);
-      vec_axpy(1, -1.0, utmp, rtmp);
+      double ur = (uright->values)[0];
+      rez -= 1 / dt * diag_V[index + 1]*ur;
    }
-   printf("test 5: %f \n", rtmp[0]);
    
-   /* subtract rhs kbar (add -k - L^T D^{-T} V D^{-1} g - L^T D^{-T} h */
-   htmp[0] = h[index];
-   h_othertemp[0] = h[index+1];
-   gtmp[0] = g[index];
-   g_othertemp[0] = g[index+1];
-   ktmp[0] = k[index];
-   
-   apply_DAdjointinv(dt, htmp, htmp); 
-   apply_DAdjointinv(dt, h_othertemp, h_othertemp);
-   vec_axpy(1, -1, h_othertemp,htmp);
-   vec_axpy(1, -1, htmp, rtmp); 
-   
-   printf("test 6: %f \n", rtmp[0]);
-   
-   apply_Dinv(dt, gtmp, gtmp);
-   apply_V(dt, gtmp, u, v, index, v_size, u_in, u_out);
-   apply_DAdjointinv(dt, gtmp, gtmp);
+   /* subtract bar{k} from rtmp*/
+   rez -= dt*k_bar[index];
 
-   apply_Dinv(dt, g_othertemp, g_othertemp);
-   apply_V(dt, g_othertemp, u, v, index+1, v_size, u_in, u_out);
-   apply_DAdjointinv(dt, g_othertemp, g_othertemp);
-
-   vec_axpy(1,-1, g_othertemp,gtmp);
-   vec_axpy(1, -1, gtmp, rtmp);
-   printf("test 7: %f \n", rtmp[0]);
-   vec_axpy(1, -1, ktmp, rtmp);
-   printf("test 8: %f \n", rtmp[0]);
+   /*load rez into rtmp vector*/
+   rtmp[0] = rez;
    
-   
+   /* Subtract rhs f */
    if (f!= NULL)
    {
-   vec_copy(1, rtmp, (r->values));
+      vec_axpy(1, -1.0, (f->values), rtmp);
    }
+
+   /* Copy temporary residual vector into residual */
+   vec_copy(1, rtmp, (r->values));
    /* Destroy temporary vectors */
-   //printf("\n\n is it triresidual??? \n %d %f %f", index, rtmp[0], utmp[0]);
    vec_destroy(rtmp);
-   vec_destroy(utmp);
    
    return 0;
 }   
 
 /*------------------------------------*/
 
-
-
 /* approximately solve Solve A(u) = f */
+
 int
 my_TriSolve(braid_App       app,
             braid_Vector    uleft,
@@ -427,11 +310,10 @@ my_TriSolve(braid_App       app,
             braid_TriStatus status)
 {
    double  t, tprev, tnext, dt;
-   double *utmp, *rtmp;
-   int index;
-   
-   /* Get the time-step size */
+
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
+
+   /* Get the time-step size */
    if (t < tnext)
    {
       dt = tnext - t;
@@ -440,8 +322,18 @@ my_TriSolve(braid_App       app,
    {
       dt = t - tprev;
    }
+   
+   int index;
+   braid_TriStatusGetTIndex(status, &index);
+   
+   /* Fake equation - no need to even compute anything here */
+   if (index == 0)
+   {
+      return 0;
+   }
 
    /* Create temporary vector */
+   double *utmp;
    vec_create(1, &utmp);
 
    /* Initialize temporary solution vector */
@@ -450,70 +342,19 @@ my_TriSolve(braid_App       app,
    /* Compute residual */
    my_TriResidual(app, uleft, uright, f, u, status);
 
-   /* Apply center block preconditioner (multiply by \tilde{C}^-1) to -r
+   /* Apply center block preconditioner (multiply by C^-1) to -r
     *
-    * Using \tilde{C} = | V_{i}/dt^2 + V_{i+1}/dt^2 + U_{i}|
-    *          V_{i} = dt * (1/u_{i} + 1/u_{i-1})
-    *          U_{i} = dt * (v_{i}^2 + v_{i+1}^2)/u_{i}^3
+    * Using C = v_{i}/dt + v_{i+1}/dt + dt*u_{i}
+    *          
     */
-   rtmp = (u->values);
-   braid_TriStatusGetTIndex(status, &index);
-   
-   //printf("\ntrisolve %d test 1: %f\n", index,  rtmp[0]);
-   double * input_u = app->input_u;
-   double * input_v = app->input_v;
-   int v_size = app->ntime + 1;
+   double * diag_U = app->diag_U;
+   double * diag_V = app->diag_V;
+   double scale = dt*diag_U[index] + 1 / dt * (diag_V[index] + diag_V[index+1]);
 
-   if (index > 0 && index < v_size - 2)
-   {
-      rtmp[0] /= 1 / (dt) * (1/input_u[index - 1] + 1 / input_u[index]) 
-      + 1 / (dt) * (1 / input_u[index] + 1 / input_u[index + 1])
-      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
-      //printf("trisolve test 2: %f\n", rtmp[0]);
-   }
-   
-   if (index == v_size - 2)
-   {
-      //printf("\n\nu end is %f before\n", rtmp[0]);
-      rtmp[0] /= 1 / (dt) * (1/input_u[index - 1] + 1 / input_u[index]) 
-      + 1 / (dt) * (1 / input_u[index] + 1 / u_out)
-      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
-      //printf("trisolve test 1.5: %f\n", rtmp[0]);
-      //printf("\n\nu end is %f after\n", rtmp[0]);
-   }
-
-   /*if ( uright == NULL )
-   {
-      rtmp[0] /= 1 / (dt) * (1/input_u[index - 1] + 1 / input_u[index])
-      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
-   }
-   else if ( index == 0 )
-   {
-      rtmp[0] /= 1 / (dt) * (1/u_in + 1 / input_u[index]) 
-      + 1 / (dt) *(1 / input_u[index] + 1 / input_u[index + 1])
-      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
-   }
-   else
-   {
-      rtmp[0] /= 1 / (dt) * (1/input_u[index - 1] + 1 / input_u[index]) 
-      + 1 / (dt) * (1 / input_u[index] + 1 / input_u[index + 1])
-      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
-   }*/
-
-   if (index == 0)
-   {
-      //printf("\n\nu begin is %f before\n", rtmp[0]);
-      rtmp[0] /= 1 / (dt) * (1/u_in + 1 / input_u[index]) 
-      + 1 / (dt) *(1 / input_u[index] + 1 / input_u[index + 1])
-      + dt * ((input_v[index] * input_v[index]) + (input_v[index+1] * input_v[index+1]))/(input_u[index]*input_u[index] * input_u[index]);
-      //printf("trisolve test 2.5: %f\n", rtmp[0]);
-      //printf("u after is %f after\n", rtmp[0]);
-   }  
-   rtmp[0] *= -1.0;
-     
    /* Complete residual update */
-   vec_axpy(1, 1.0, utmp, (u->values));
-   
+   vec_axpy(1, -1.0/scale, (u->values), utmp);
+   vec_copy(1, utmp, (u->values));
+
    /* no refinement */
    braid_TriStatusSetRFactor(status, 1);
 
@@ -539,9 +380,9 @@ my_Init(braid_App     app,
    vec_create(1, &(u->values));
 
    //u->values[0] = ((double)braid_Rand())/braid_RAND_MAX;
-   //u->values[1] = ((double)braid_Rand())/braid_RAND_MAX;
-   u->values[0] = 1; // just random value
+   u->values[0] = 1;
    *u_ptr = u;
+
    return 0;
 }
 
@@ -638,6 +479,7 @@ my_Access(braid_App          app,
       vec_create(1, &(app->u[ii]));
       vec_copy(1, (u->values), (app->u[ii]));
    }
+
    return 0;
 }
 
@@ -648,7 +490,7 @@ my_BufSize(braid_App           app,
            int                 *size_ptr,
            braid_BufferStatus  bstatus)
 {
-   *size_ptr = 1*sizeof(double);
+   *size_ptr = 2*sizeof(double);
    return 0;
 }
 
@@ -663,12 +505,13 @@ my_BufPack(braid_App           app,
    double *dbuffer = buffer;
    int i;
 
-   for(i = 0; i < 1; i++)
+   for(i = 0; i < 2; i++)
    {
       dbuffer[i] = (u->values)[i];
    }
 
-   braid_BufferStatusSetSize( bstatus,  sizeof(double));
+   braid_BufferStatusSetSize( bstatus,  2*sizeof(double));
+
    return 0;
 }
 
@@ -686,10 +529,10 @@ my_BufUnpack(braid_App           app,
 
    /* Allocate memory */
    u = (my_Vector *) malloc(sizeof(my_Vector));
-   u->values = (double*) malloc( sizeof(double) );
+   u->values = (double*) malloc( 2*sizeof(double) );
 
    /* Unpack the buffer */
-   for(i = 0; i < 1; i++)
+   for(i = 0; i < 2; i++)
    {
       (u->values)[i] = dbuffer[i];
    }
@@ -698,53 +541,61 @@ my_BufUnpack(braid_App           app,
    return 0;
 }
 
+/*------------------------------------*/
 
-/*solves for e in H_p e = r*/
-void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, double u_in, double u_out){
+
+/*Using Xbraid to solve the state-based Schur complement of Hp*/
+//ntime = len(diag_U) = len(sol)
+void solveHpHelper(int ntime, double *diag_U, double *diag_V, double *k_bar, int rank, double *sol)
+{
+
+    /*pad diag_U, diag_V, k_bar with 1 (ghost equation)*/
+    double *pad_U, *pad_V, *pad_k;
+    vec_create(ntime+1, &pad_U);
+    vec_create(ntime+2, &pad_V);
+    vec_create(ntime+1, &pad_k);
+    pad_U[0] = pad_V[0] = pad_k[0] = 1;
+    for (int i = 0; i < ntime; i++) pad_U[i+1] = diag_U[i];
+    for (int i = 0; i < ntime+1; i++) pad_V[i+1] = diag_V[i];
+    for (int i = 0; i < ntime+1; i++) pad_k[i+1] = k_bar[i];
+    
+    
    braid_Core  core;
    my_App     *app;
-      
-   int         rank, ntime;
-   
+
+   /* Define time domain and step */
+   double tstart = 0.0;             /* Beginning of time domain */
+   double tstop  = 0.75;             /* End of time domain WARNING: NEED TO BE 1-dt in this problem!!*/
+//   double dt     = (tstop-tstart)/ntime; 
+
    int         max_levels, min_coarse, nrelax, nrelaxc, cfactor, maxiter;
    int         access_level, print_level;
    double tol;
-   /* rank should not matter */
-   rank = 2;
-   /* Define time domain */
-   ntime  = v_size;              /* Total number of time-steps */
+   
+//    printf("begin H_p inner solve\n");
 
    /* Define some Braid parameters */
-   max_levels     = 30;
+   max_levels     = 10;
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 7;
-   maxiter        = 20;
+   maxiter        = 50;
    cfactor        = 2;
    tol            = 1.0e-6;
    access_level   = 1;
-   print_level    = 2;
-   /* Set up twohe app structure */
+   print_level    = 0;//was 2
+
+   /* Set up the app structure */
    app = (my_App *) malloc(sizeof(my_App));
    app->myid     = rank;
    app->ntime    = ntime;
    app->u        = NULL;
-   vec_create(v_size - 1, &app->input_u);
-   vec_create(v_size, &app->input_v);
-   vec_create(3*v_size - 1, &app->rhs);
-   vec_copy(v_size - 1, u, app->input_u);
-   vec_copy(v_size, v, app->input_v);
-   vec_copy(3 * v_size - 1, r, app->rhs);
-   /* Initialize k, h, g vectors */
-   double * k;
-   double * h;
-   double * g;
-   vec_create(v_size-1, &k);
-   vec_create(v_size, &h);
-   vec_create(v_size, &g);
-   extract(r, k, h, g, v_size);
+   app->diag_U = pad_U;
+   app->diag_V = pad_V;
+   app->k_bar = pad_k;
+
    /* Initialize XBr-1aid */
-   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
+   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, tstart, tstop, ntime, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
                       my_BufSize, my_BufPack, my_BufUnpack, &core);
@@ -753,174 +604,215 @@ void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, 
    braid_SetMaxLevels(core, max_levels);
    braid_SetMinCoarse(core, min_coarse);
    braid_SetNRelax(core, -1, nrelax);
-  
    if (max_levels > 1)
    {
       braid_SetNRelax(core, max_levels-1, nrelaxc); /* nrelax on coarsest level */
    }
    braid_SetCFactor(core, -1, cfactor);
    braid_SetAccessLevel(core, access_level);
-
    braid_SetPrintLevel( core, print_level);       
    braid_SetMaxIter(core, maxiter);
    braid_SetAbsTol(core, tol);
 
    /* Parallel-in-time TriMGRIT simulation */
    braid_Drive(core);
-   /*   Compute control v and adjoint w from x */
-   double * out_u;
-   double * out_v, * out_vtmp, * out_w, *w, * wtmp, *gtmp, *htmp;
-   vec_create(ntime, &w);
-   vec_create(1, &wtmp);
-   vec_create(v_size, &gtmp);
-   vec_create(v_size, &out_v);
-   vec_create(v_size, &out_w);
-   vec_create(1, &out_vtmp);
-   vec_create(1, &htmp);
-   vec_create(v_size - 1, &out_u);
-   double **app_u;
-   
-   for(int i = 0; i < v_size; i++)
+
+   /*print load the solution into sol*/
+   for (int i = 1; i < ntime + 1; i++)
    {
-      /* Compute Lu */
-      app_u = app->u;
-      wtmp[0] = 0.0;
-      //printf("\n %f", wtmp[0]);
-
-      if (i != 0)
-      {
-         vec_axpy(1, -1, app_u[i-1], wtmp);
-         //printf("\n what the heckin %f", app_u[i-1][0]);
-      }
-      if ( i != v_size - 1 )
-      {
-         vec_axpy(1, 1, app_u[i], wtmp);
-      }
-      //printf("\n %f", wtmp[0]);
-
-      /* wtmp = ( g - Lu )  */
-      gtmp[0] = g[i];
-      vec_axpy(1, -1, gtmp, wtmp);
-      vec_scale(1, -1.0, wtmp);
-      //printf("\n %f", wtmp[0]);
-      /* wtmp = D^{-1} (g - Lu) */
-      apply_Dinv(dt, wtmp, wtmp);
-      vec_copy(1, wtmp, out_vtmp);
-      //printf("\n %f", wtmp[0]);
-      /* v is D^{-1} (g - Lu) */
-      out_v[i] = -out_vtmp[0];
-
-      /* D^{-T} V D^{-1} (g - Lu) */
-      apply_V(dt, wtmp, u, v, i, v_size, u_in, u_out);
-      apply_DAdjointinv(dt, wtmp, wtmp);
-
-      /* D^{-T} h  */
-      htmp[0] = h[i];
-      apply_DAdjointinv(dt, htmp, htmp);
-      vec_axpy(1, 1, htmp, wtmp);
-      out_w[i] = -wtmp[0];
-      if(i < v_size - 1)
-      {
-         out_u[i] = app_u[i][0];
-      }
+      sol[i-1]=(app->u)[i][0];
    }
-   
-   merge(e, out_u, out_v, out_w, v_size);
 
-   for (int i = 0; i < (app->ntime); i++)
-   {
-      free(app->u[i]);
-   }
-   free(app->u);
    free(app);
    braid_Destroy(core);
+
+   vec_destroy(pad_U);
+   vec_destroy(pad_V);
+   vec_destroy(pad_k);
+}
+
+int rank;
+
+void show_vec(int size, double *v){
+    printf("[");
+    for (int i = 0; i < size; i++)
+    {  
+       printf("%f ",v[i]); 
+    }
+    printf("]\n");
+}
+
+/*solves for e in H_p e = r*/
+void solveHp(double *e, double *r, double *u, double *v, double dt, int v_size, double u_in, double u_out){
+//    printf("begin solve H_p\n");
+
+    vec_set(3*v_size-1, 0, e);
+    /*compute the diagonal of D_{uu}J, D_{vv}J*/
+   double *DuuJ, *DvvJ; 
+   vec_create(v_size-1, &DuuJ);
+   vec_create(v_size, &DvvJ);
+   for (int i = 0; i < v_size - 1; i++){
+        DuuJ[i] = dt*(v[i]*v[i] + v[i+1]*v[i+1]) / (u[i]*u[i]*u[i]);
+   }
+   for (int i = 0; i < v_size; i++){
+        double ul = (i==0? u_in: u[i-1]);
+        double ur = (i==v_size-1? u_out: u[i]);
+        DvvJ[i] = dt*(1/ul + 1/ur);
+   }
+   
+   
+   /* extract k, h, g from r */
+   double *k, *h, *g;
+   vec_create(v_size-1, &k);
+   vec_create(v_size, &h);
+   vec_create(v_size, &g);
+   extract(r, k, h, g, v_size);
+
+   
+
+   /*compute k bar, the rhs for the schur complement*/
+    double *k_bar, *tmps, *tmpl;
+   vec_create(v_size - 1, &k_bar);
+   vec_create(v_size - 1, &tmps);
+   vec_create(v_size, &tmpl);
+   // k_bar <- k
+   vec_copy(v_size - 1, k, k_bar);
+   // k_bar += L^T D^{-T} h
+    vec_copy(v_size, h, tmpl);
+    vec_scale(v_size, -1/dt, tmpl);
+    applyLAdjoint(v_size, tmpl, tmps);
+    vec_axpy(v_size-1, 1, tmps, k_bar);
+    // k_bar += L^T D^{-T} V D^{-1} g
+    vec_copy(v_size, g, tmpl);
+    vec_scale(v_size, 1/(dt*dt), tmpl);
+    applyDiag(v_size, DvvJ, tmpl);
+    applyLAdjoint(v_size, tmpl, tmps);
+    vec_axpy(v_size-1, 1, tmps, k_bar);
+
+
+
+    /* solve the schur complement*/
+    double *sol_u;
+    vec_create(v_size-1, &sol_u);
+    solveHpHelper(v_size-1, DuuJ, DvvJ, k_bar, rank, sol_u);
+
+
+    /* back subtitue sol_u to solve for sol_v and sol_w*/
+    double *sol_v, *sol_w;
+    vec_create(v_size, &sol_v);
+    vec_create(v_size, &sol_w);
+    //tmp <- L*u
+    applyL(v_size, sol_u, tmpl);
+    //sol_v <- g
+    vec_copy(v_size, g, sol_v);
+    //sol_v -= Lu
+    vec_axpy(v_size, -1, tmpl, sol_v);
+    //sol_v <- -D^{-1} sol_v
+    vec_scale(v_size, 1/dt, sol_v);
+
+
+
+   //sol_w <- D^{-T} V sol_v
+    vec_copy(v_size, sol_v, sol_w);
+    applyDiag(v_size,DvvJ,sol_w);
+    vec_scale(v_size,-1/dt,sol_w);
+    //sol_w <- sol_w - D^{-T} h
+    vec_copy(v_size, h, tmpl);
+    vec_scale(v_size, -1/dt, tmpl);
+    vec_axpy(v_size, -1, tmpl, sol_w);
+    
+    merge(e, sol_u, sol_v, sol_w, v_size);
+
+    vec_destroy(DuuJ);
+    vec_destroy(DvvJ);
+    vec_destroy(k);
+    vec_destroy(h);
+    vec_destroy(g);
+    vec_destroy(k_bar);
+    vec_destroy(tmps);
+    vec_destroy(tmpl);
+    vec_destroy(sol_u);
+    vec_destroy(sol_v);
+    vec_destroy(sol_w);
 }
 
 /*Given  x, Computes Hx*/
 void ApplyH(double *u, double *v, double dt, double *x, double *Hx, int n, double u_in, double u_out){
-   double * utmp;
-   double * vtmp;
-   double * wtmp;
-   double * rtmp;
-   vec_create(1, &utmp);
-   vec_create(1, &vtmp);
-   vec_create(1, &wtmp);
-   vec_create(1, &rtmp);
 
-   double* uOfx = x;
-   double* vOfx = x+(n-1);
-   double* wOfx = x+(n+(n-1));
+    /*compute the diagonal of D_{uu}J, D_{vv}J*/
+    double *DuuJ, *DvvJ; 
+    vec_create(n-1, &DuuJ);
+    vec_create(n, &DvvJ);
+    for (int i = 0; i < n - 1; i++){
+        DuuJ[i] = dt*(v[i]*v[i] + v[i+1]*v[i+1]) / (u[i]*u[i]*u[i]);
+    }
+    for (int i = 0; i < n; i++){
+        double ul = (i==0? u_in: u[i-1]);
+        double ur = (i==n-1? u_out: u[i]);
+        DvvJ[i] = dt*(1/ul + 1/ur);
+    }
 
-   int HxIndex=0;
 
-   for ( int i = 0; i < n-1; i++ ) // U*u + B^T*v + L^T*w
-   {
-      rtmp[0] = 0.0;
-      // U*u
-      utmp[0] = uOfx[i];
-      apply_U(dt, utmp, u, v, i);
-      rtmp[0] = utmp[0];
-
-      // + B^T*v
-      vtmp[0] = 0.0;
-      vtmp[0] -= dt*v[i]/(u[i]*u[i])*vOfx[i];
-      vtmp[0] -= dt*v[i+1]/(u[i]*u[i])*vOfx[i+1];
-      rtmp[0] += vtmp[0];
-
-      // + L^T*w
-      rtmp[0] += wOfx[i] - wOfx[i+1];
-      Hx[HxIndex] = rtmp[0];
-      ++HxIndex;
-   }
+    /*input vectors*/
+    double *x_u, *x_v, *x_w;
+    vec_create(n-1, &x_u);
+    vec_create(n, &x_v);
+    vec_create(n, &x_w);
+    extract(x, x_u, x_v, x_w, n);
    
-   for ( int i = 0; i < n; i++ ) // B*u + V*v - D^T*w
-   {
-      rtmp[0] = 0.0;
-      //B*u
-      utmp[0] = 0.0;
-      if ( i != n-1 ) utmp[0] -= dt*v[i]/(u[i]*u[i])*uOfx[i];
-      if ( i != 0 ) utmp[0] -= dt*v[i]/(u[i-1]*u[i-1])*uOfx[i-1];
-      rtmp[0] = utmp[0];
+    /* tmp vectors*/
+    double *utmp, *vtmp, *wtmp;
+    vec_create(n, &utmp);//has one extra slot
+    vec_create(n, &vtmp);
+    vec_create(n, &wtmp);
+   
+    /*output vectors*/
+    double *retu, *retv, *retw;
+    vec_create(n-1, &retu);
+    vec_create(n, &retv);
+    vec_create(n, &retw);
+   
+   // D_{uu}J*u + B^T*v + L^T*w
+    vec_copy(n-1, x_u, utmp);
+    applyDiag(n-1, DuuJ, utmp);    
+    applyBAdjoint(n, u, v, x_v, vtmp, dt);
+    applyLAdjoint(n, x_w, wtmp);
+    vec_copy(n-1, utmp, retu);
+    vec_axpy(n-1, 1, vtmp, retu);
+    vec_axpy(n-1, 1, wtmp, retu);
 
+    // B*u + D_{vv}J*v - D^T*w
+    applyB(n, u, v, x_u, utmp, dt);
+    vec_copy(n, x_v, vtmp);
+    applyDiag(n, DvvJ, vtmp);
+    vec_copy(n, x_w, wtmp);
+    vec_scale(n, dt, wtmp);
+    vec_copy(n, utmp, retv);
+    vec_axpy(n, 1, vtmp, retv);
+    vec_axpy(n, 1, wtmp, retv);
 
-      // + V*v
-      vtmp[0] = vOfx[i];
-      apply_V(dt,vtmp,u,v,i,n, u_in, u_out);
-      vec_axpy(1,1,vtmp,rtmp);
+    // Lu - Dv
+    applyL(n, x_u, utmp);
+    vec_copy(n, x_v, vtmp);
+    vec_scale(n, dt, vtmp);
+    vec_copy(n, utmp, retw);
+    vec_axpy(n, 1, vtmp, retw);
 
-      // - D^T*w
-      wtmp[0]=wOfx[i];
-      apply_DAdjoint(dt, wtmp, wtmp);
-      vec_axpy(1, -1, wtmp, rtmp);
+    // Hx = [retu; retv; retw]
+    merge(Hx, retu, retv, retw, n);
 
-      Hx[HxIndex] = rtmp[0];
-      ++HxIndex;
-   }
-
-
-   for ( int i = 0; i < n; i++ ) // L*u - D*v
-   {
-      rtmp[0] = 0.0;
-      // L*u
-      wtmp[0] = 0;
-      if ( i != n-1 ) wtmp[0] += uOfx[i];
-      if ( i != 0 ) wtmp[0] -= uOfx[i-1];
-      rtmp[0] = wtmp[0];
-
-      // - D*v
-      vtmp[0] = vOfx[i];
-      apply_D(dt,vtmp,vtmp);
-      vec_axpy(1,-1,vtmp,rtmp);
-      Hx[HxIndex] = rtmp[0];
-      ++HxIndex;
-   }
-
-   vec_destroy(utmp);
-   vec_destroy(vtmp);
-   vec_destroy(wtmp);
-   vec_destroy(rtmp);
+    vec_destroy(x_u);
+    vec_destroy(x_v);
+    vec_destroy(x_w);
+    vec_destroy(utmp);
+    vec_destroy(vtmp);
+    vec_destroy(wtmp);
+    vec_destroy(retu);
+    vec_destroy(retv);
+    vec_destroy(retw);
 }
    
+/**/
 double quick_norm(double *v, int n){
    double sum = 0.0;
    for (int i = 0; i < n; i++){
@@ -930,45 +822,22 @@ double quick_norm(double *v, int n){
 }
  
 
-/* compute F(x)=\nabla F(u,v,w)*/
-void applyF(double *u, double *v, double *w, double *g, double *Fx, double dt, int v_size){
+/* compute F(x)=\nabla L(u,v,w)*/
+void applyF(double *u, double *v, double *w, double *g, double *Fx, double dt, int n){
    double *utmp, *vtmp, *wtmp; 
-   int n = v_size;
-   /*Julia Code
-       fu = zeros(nc-1)
-    for i = 1:nc-1
-        fu[i] = -(dt/2)*(v[i]^2 + v[i+1]^2)/(u[i]^2)  #(54)
-    end
-    fu = fu + L'*w
-    */
+   
    vec_create(n-1, &utmp);
    for (int i = 0; i < n-1; i++){
       utmp[i] = -(dt/2) * (v[i]*v[i] + v[i+1]*v[i+1]) / (u[i]*u[i]) + (w[i]-w[i+1]);
    }
    
-   /* Julia Code
-       # Apply KKT gradient-v block equations   #(55)
-    fv = zeros(nc)
-    fv[1] = dt*(1/uin + 1/u[1])*v[1]
-    for i = 2:nc-1
-        fv[i] = dt*(1/u[i-1] + 1/u[i])*v[i]
-    end
-    fv[nc] = dt*(1/u[nc-1] + 1/uout)*v[nc]
-    fv = fv - D'*w
-   */
    vec_create(n, &vtmp);
    for (int i = 0; i < n; i++){
-      double ulm2 = ( i==0? 1.0/u_in : 1.0/u[i-1] );
-      double urm2 = ( i==n-1? 1.0/u_out : 1.0/u[i] );
-      vtmp[i] = dt * (ulm2 + urm2) * v[i] + dt*w[i];
+      double ul = i==0? g[0] : u[i-1];
+      double ur = i==n-1? -g[n-1] : u[i];
+      vtmp[i] = dt * (1/ul + 1/ur) * v[i] + dt*w[i];
    }
-
-   /* Julia Code
-    # Apply KKT gradient-w block equations
-    fw = L*u - D*v
-    fw[1]  = fw[1]  - uin
-    fw[nc] = fw[nc] + uout
-   */
+   
    vec_create(n, &wtmp);
    for (int i = 0; i < n; i++){
       wtmp[i] = 0;
@@ -984,28 +853,29 @@ void applyF(double *u, double *v, double *w, double *g, double *Fx, double dt, i
 }
  
 
-/* Apply Jac[F(x)]^-1*/
+/* Apply Jac[F(x)]^{-1} = H^{-1}*/
 void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n, double u_in, double u_out){
+    printf("    Begin applying H^{-1}\n");
+    printf("    rhs:\n    ");
+    show_vec(11, Fx);
+    printf("    u:\n    ");
+    show_vec(3, u);
+    printf("    v:\n    ");
+    show_vec(4, v);
+
    double *dx, *r, *e, *Hdx;
    vec_create(3*n-1, &dx);
    vec_create(3*n-1, &r);
    vec_create(3*n-1, &e);
    vec_create(3*n-1, &Hdx);
-
-   for(int i = 0; i < 3 * n- 1; i++)
-   {
-      dx[i] = 0;
-      e[i] = 0;
-      Hdx[i] = 0;
-      r[i] = 0;
-   }
-
-   double rtol = 1e-3;
-   int max_itr = 2;
+    
+    vec_set(3*n-1,0,dx);
+   double rtol = 1e-6;
+   int max_itr = 10;
    //compute the first residual   
    vec_copy(3*n-1, Fx, r);
    ApplyH(u, v, dt, dx, Hdx, n, u_in, u_out);
-   vec_axpy(3*n-1, -1.0, Hdx, r);
+   vec_axpy(3*n-1, -1.0, Hdx, r);   
 
    double rnorm0 = quick_norm(r,3*n-1);
    double rnrel  = 1.0;
@@ -1017,16 +887,14 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n, double u_
       ApplyH(u, v, dt, dx, Hdx, n, u_in, u_out);
       vec_axpy(3*n-1, -1.0, Hdx, r);  
 
+      // e <- Hp^-1 * r     
       solveHp(e, r, u, v, dt, n, u_in, u_out);
-      for ( int i = 0; i < 59; ++i )
-      {
-         printf("%d th error. idx: %d: % 1.5e\n", itr, i, e[i]);
-      }
       // dx <- dx + e
       vec_axpy(3*n-1, 1.0, e, dx);
       itr++;
+
       rnrel = quick_norm(r,3*n-1) / rnorm0;
-      printf("    linear iter = %d, rnrel = % 1.14e\n", itr, rnrel);
+      printf("        linear iter = %d, rnrel = % 1.14e\n", itr, rnrel);
    }
    vec_copy(3*n-1, dx, Fx);
    vec_destroy(dx);
@@ -1041,78 +909,111 @@ void ApplyJacFxInv(double *Fx, double *u, double *v, double dt, int n, double u_
 
 int main(int argc, char *argv[])
 {
-   double dt;
-   int ntime, max_newton_iter;
-   int rank;
-   int xsize;
-   double * x, * y, *u, * v, *w, *g ;
-  
-
+   
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   
+//    double * diag_U, * diag_V, *k_bar;
+//    vec_create(4, &diag_U);
+//    vec_create(5, &diag_V);
+//    vec_create(4, &k_bar);
+//    for (int i = 0; i < 4; i++){
+//         diag_U[i] = 1;
+//         diag_V[i] = 1;
+//         k_bar[i] = 1;
+//    }
+//    diag_V[4] = 1;
 
-/* Define time domain */
-   ntime  = 20;              /* Total number of time-steps */
-   tstart = 0.0;             /* Beginning of time domain */
-   tstop  = 1.0;             /* End of time domain*/
-   xsize = 3 * ntime - 1;
-/*  maximum iterations of Newton's method */
-   max_newton_iter = 1;
+   
+//    solveHpHelper(diag_U, diag_V, k_bar, 5, rank);
+
+
+    // int n = 4;
+    // double u[3]={3, 5, 4};
+    // double v[4]={1, 1, 1, 1};
+    // double u_in = 1, u_out=2, dt=1.0/4;
+    // double rhs[11]={1,2,3,4,5,6,7,8,9,10,11};
+    
+    // double *ans;
+    // vec_create(11, &ans);
+    // show_vec(11, rhs);
+    // ApplyJacFxInv(rhs, u, v, dt, n, u_in, u_out);
+    // show_vec(11, rhs);
+
+    /* Define time domain */
+    int ntime = 8;              /* Total number of time-steps */
+    double tstart = 0.0;        /* Beginning of time domain */
+    double tstop  = 1.0;        /* End of time domain*/
+    double dt = (tstop - tstart)/ntime;
+   
+   
+   int max_newton_iter = 20;   /*  maximum iterations of Newton's method */
+   
+   int xsize = 3 * ntime - 1;
+   double * x, * xtmp, *u, * v, *w, *g;
+  
    
    /* create vectors */
    vec_create(xsize, &x);
-   vec_create(xsize, &y);
+   vec_create(xsize, &xtmp);
+
    vec_create(ntime - 1, &u);
    vec_create(ntime, &v);
    vec_create(ntime, &w);
+
    vec_create(ntime, &g);
-   //initialize g
+   
+
+   //initialize u in , u out, put them into g
+   double u_in = 1.0;
+   double u_out = 2.0;
+   vec_set(ntime, 0, g);
+   g[0] = u_in;
+   g[ntime-1] = -u_out;
+
+   
+   
+   //a straight line feels like a good guess
+   vec_set(xsize, 1, x);
    for(int i = 0; i < ntime; i++)
    {
-      g[i] = 0;
-   }   
-   //initialize y such that its norm is greater than residual tolerance
-   for(int i = 0; i < xsize; i++)
-   {
-      y[i] = 1;
-   }
-   //initialize u in , u out, put them into g
-   u_in = 1.0;
-   u_out = 2.0;
-   g[0] = u_in;
-   g[ntime-1] -= u_out;
-
-   //get dt
-   dt = (tstop - tstart)/ntime;
-
-   //initialize x vector to all 1's
-   for(int i = 0; i < xsize; i++)
-   {
-      x[i]=1;
+      x[i] = 1 + i/ntime;
    }
    
-   extract(x,  u, v, w, ntime);
-   applyF(u, v, w, g, y, dt, ntime);
-   double ynorm0 = quick_norm(y, xsize);
+   
+   double ynorm0 = ntime;
    double ynrel = 1.0;
    
    int iter = 0;
-   while( ynrel >= 1.0e-6 && iter < max_newton_iter )
+   while(ynrel >= 1.0e-6 && iter < max_newton_iter)
    {
-      //apply Jacobian inverse
-      //  x <- x - Jac(F(x))^{-1} * F(x)
-      ApplyJacFxInv(y, u, v, dt, ntime, u_in, u_out);
-      vec_axpy(xsize, -1.0, y, x);
-
-      //apply F to x after extracting u, v, w, store in
-      extract(x,  u, v, w, ntime);
-      applyF(u, v, w, g, y, dt, ntime);
-      ++iter;
-      ynrel = quick_norm(y, xsize) / ynorm0;
-      printf("iter = %d, fnrel = % 1.14e\n", iter, ynrel);
+        // unpack x=[u; v; w]
+        extract(x, u, v, w, ntime);
+        // xtmp <- x
+        vec_copy(xsize, x, xtmp);
+        // xtmp <- F(x)
+        applyF(u, v, w, g, xtmp, dt, ntime);
+        printf("Fx:\n");
+        show_vec(xsize, xtmp);
+        // xtmp <- Jac(F(x))^{-1} * xtmp
+        ApplyJacFxInv(xtmp, u, v, dt, ntime, u_in, u_out);
+        //  x <- x - Jac(F(x))^{-1} * F(x)
+        vec_axpy(xsize, -1.0, xtmp, x);
+        //house keeping
+        ++iter;
+        ynrel = quick_norm(xtmp, xsize) / ynorm0;
+        printf("Newton iter = %d, fnrel = % 1.14e\n", iter, ynrel);
    }
-   MPI_Finalize();
+
+    extract(x, u, v, w, ntime);
+    printf("u:\n");
+    show_vec(ntime-1, u);
+    printf("v:\n");
+    show_vec(ntime, v);
+    printf("w:\n");
+    show_vec(ntime, w);
+    MPI_Finalize();
 }
 
    //    braid_Core  core;
