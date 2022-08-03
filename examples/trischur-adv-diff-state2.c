@@ -1,5 +1,5 @@
 /*BHEADER**********************************************************************
- * Written by Isaiah Meyers, Joseph Munar, Eric Neville, Tom Overman
+ * Written by Ruofeng Liu
  * 
  * This file is part of XBraid. For support, post issues to the XBraid Github page.
  * 
@@ -169,34 +169,6 @@ apply_AInverse(double ac, double al, double au, int M, double *u, double *scr)
    }
 }
 
-/* This applies a constant tridiagonal matrix A = [al ac au] */
-void
-apply_Tridiagonal(double ac, double al, double au, int M, double *u)
-{   
-   double *ans;
-   vec_create(M, &ans);
-   ans[0] = u[0]*ac + u[1]*au;
-   ans[M-1] = u[M-2]*al + u[M-1]*ac;
-   for(int i = 1; i < M-1; i++){
-      ans[i]= al*u[i-1] + ac*u[i] + au*u[i+1];
-   }
-   vec_copy(M, ans, u);
-}
-
-/*apply A*/
-void
-apply_A(double dt, double dx, double nu, int M, double *u)
-{   
-   apply_Tridiagonal(1+2*b(dt,dx,nu), -g(dt,dx)-b(dt, dx, nu), g(dt,dx)-b(dt, dx, nu), M, u);
-}
-
-/*apply A^T*/
-void
-apply_AAdjoint(double dt, double dx, double nu, int M, double *u)
-{   
-   apply_Tridiagonal(1+2*b(dt,dx,nu), g(dt,dx)-b(dt, dx, nu), -g(dt,dx)-b(dt, dx, nu), M, u);
-}
-
 /* This is the application of A inverse*/
 
 void
@@ -259,7 +231,8 @@ apply_TriResidual(my_App     *app,
                   my_Vector  *uright,
                   my_Vector  *f,
                   my_Vector  *r,
-                  double      dt)
+                  double      dt,
+                  int idx)
 {
    double  nu     = (app->nu);
    double  alpha  = (app->alpha);
@@ -276,22 +249,25 @@ apply_TriResidual(my_App     *app,
 
    /* Compute action of center block */
 
-   /* rtmp <- dxdtA^{-T}A^{-1} u */
-   vec_copy(mspace, (r->values), utmp);
-   apply_Phi(dt, dx, nu, mspace, utmp, scr);
-   apply_PhiAdjoint(dt, dx, nu, mspace, utmp, scr);
-   vec_scale(mspace, dx*dt, utmp);  
-   vec_copy(mspace, utmp, rtmp);
-
-   /* rtmp <- rtmp + alpha*(dx/dt) A^TA u */
+   /* rtmp <- alpha*(dx/dt) u */
    vec_copy(mspace, (r->values), utmp);
    vec_scale(mspace, alpha*dx/dt, utmp);
+   vec_copy(mspace, utmp, rtmp);
+
+   /* rtmp <- rtmp + dxdtA^{-T}A^{-1} u */
+   vec_copy(mspace, (r->values), utmp);
+   if (uleft!=NULL)
+   {
+      apply_Phi(dt, dx, nu, mspace, utmp, scr);
+      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, scr);
+   }
+   vec_scale(mspace, dx*dt, utmp);  
    vec_axpy(mspace, 1.0, utmp, 1.0, rtmp);
    
 
    /* rtmp = rtmp + alpha*(dx/dt) u */
    /* This term is zero at the last block element*/
-   if (uright != NULL){
+   if (uright != NULL && uleft != NULL){
       vec_copy(mspace, (r->values), utmp);
       apply_Phi(dt, dx, nu, mspace, utmp, scr);
       apply_PhiAdjoint(dt, dx, nu, mspace, utmp, scr);
@@ -300,7 +276,7 @@ apply_TriResidual(my_App     *app,
    }
 
    /* Compute action of west block */
-   if (uleft != NULL){
+   if (idx > 1){
       vec_copy(mspace, (uleft->values), utmp);
       apply_Phi(dt, dx, nu, mspace, utmp, scr);
       vec_scale(mspace, alpha*dx/dt, utmp);
@@ -308,7 +284,7 @@ apply_TriResidual(my_App     *app,
    }
 
    /* Compute action of east block */
-   if (uright != NULL){
+   if (uright != NULL && idx != 0){
       vec_copy(mspace, (uright->values), utmp);
       apply_PhiAdjoint(dt, dx, nu, mspace, utmp, scr);
       vec_scale(mspace, alpha*dx/dt, utmp);
@@ -317,16 +293,25 @@ apply_TriResidual(my_App     *app,
 
 
    /* subtract bar{g} from rtmp*/
-   vec_copy(mspace, u0, utmp);
-   apply_PhiAdjoint(dt, dx, nu, mspace, utmp, scr);
-   vec_scale(mspace, dx*dt, utmp);
-   vec_axpy(mspace, -1.0, utmp, 1.0, rtmp); 
-   /* additional term index 0 */
-   if (uleft==NULL){
+   if (idx==0)
+   {
       vec_copy(mspace, u0, utmp);
-      vec_scale(mspace, alpha*dx/dt, utmp);
+      vec_scale(mspace, dx*dt + alpha*dx/dt, utmp);
       vec_axpy(mspace, -1.0, utmp, 1.0, rtmp); 
+   }else{
+      vec_copy(mspace, u0, utmp);
+      apply_PhiAdjoint(dt, dx, nu, mspace, utmp, scr);
+      vec_scale(mspace, dx*dt, utmp);
+      vec_axpy(mspace, -1.0, utmp, 1.0, rtmp); 
+   /* additional term index 0 */
+      if (idx==1){
+         vec_copy(mspace, u0, utmp);
+         vec_scale(mspace, alpha*dx/dt, utmp);
+         vec_axpy(mspace, -1.0, utmp, 1.0, rtmp); 
+      }
    }
+   
+   
 
    /* Subtract rhs f */
    if (f != NULL){
@@ -366,7 +351,7 @@ my_TriResidual(braid_App       app,
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
    braid_TriStatusGetTIndex(status, &index);
-
+   
    /* Get the time-step size */
    if (t < tnext){
       dt = tnext - t;
@@ -375,7 +360,7 @@ my_TriResidual(braid_App       app,
    }
 
    /* Compute residual */
-   apply_TriResidual(app, uleft, uright, f, r, dt);
+   apply_TriResidual(app, uleft, uright, f, r, dt, index);
 
    return 0;
 }   
@@ -420,10 +405,13 @@ my_TriSolve(braid_App       app,
       my_TriResidual(app, uleft, uright, f, u, status);
 
       /* Use diagonal of Schur-complement to scale residual */
-      if (uright!=NULL){
-         scale = dx*dt + 2*alpha*dx/dt;
-      }else{
+      if (uright == NULL||uleft == NULL)
+      {
          scale = dx*dt + alpha*dx/dt;
+      }
+      else
+      {
+         scale = dx*dt + 2*alpha*dx/dt;
       }
       vec_axpy(mspace, 1.0, utmp, -1.0/scale, (u->values));
    }
@@ -677,9 +665,9 @@ main(int argc, char *argv[])
    /* Define some Braid parameters */
    max_levels     = 10;
    min_coarse     = 1;
-   nrelax         = 2;
+   nrelax         = 1;
    nrelaxc        = 10;
-   maxiter        = 100;
+   maxiter        = 50;
    cfactor        = 2;
    tol            = 1.0e-6;
    access_level   = 2;
@@ -820,7 +808,7 @@ main(int argc, char *argv[])
    app->scr      = scr;
 
    /* Initialize XBraid */
-   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
+   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
                       my_BufSize, my_BufPack, my_BufUnpack, &core);
@@ -857,7 +845,9 @@ main(int argc, char *argv[])
       file = fopen(filename, "w");
       for (i = 0; i < (app->npoints); i++)
       {
-         apply_Phi(dt, dx, nu, mspace, u[i], scr);
+         if(i>0){
+            apply_Phi(dt, dx, nu, mspace, u[i], scr);
+         }
          fprintf(file, "%05d: ", ((app->ilower)+i+1));
          for(j=0; j <mspace; j++)
          {
