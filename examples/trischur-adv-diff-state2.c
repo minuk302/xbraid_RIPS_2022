@@ -397,7 +397,8 @@ my_TriSolve(braid_App       app,
    /* Create temporary vector */
    vec_create(mspace, &utmp);
 
-   for (int iter = 0; iter < 1; iter++){
+   int iter;
+   for (iter = 0; iter < 1; iter++){
       /* Initialize temporary solution vector */
       vec_copy(mspace, (u->values), utmp);
 
