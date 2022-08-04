@@ -638,7 +638,7 @@ my_BufUnpack(braid_App           app,
 int
 main(int argc, char *argv[])
 {
-	printf("program id -4\n");
+	//printf("program id -4\n");
    braid_Core  core;
    my_App     *app;
          
@@ -664,7 +664,7 @@ main(int argc, char *argv[])
    nu    = .03;             /* parameter in PDE (used 0.3 in RIPS) */
 
    /* Define some Braid parameters */
-   max_levels     = 10;
+   max_levels     = 20;
    min_coarse     = 1;
    nrelax         = 1;
    nrelaxc        = 10;
