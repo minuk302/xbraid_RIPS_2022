@@ -209,7 +209,7 @@ my_TriResidual(braid_App       app,
    braid_TriStatusGetTriT(status, &t, &tprev, &tnext);
    braid_TriStatusGetLevel(status, &level);
    braid_TriStatusGetTIndex(status, &index);
-
+   
    /* Get the time-step size */
    if (t < tnext)
    {
@@ -223,6 +223,13 @@ my_TriResidual(braid_App       app,
    /* Create temporary vectors */
    vec_create(2, &rtmp);
    vec_create(2, &utmp);
+
+   if (index == 0)
+   {
+      rtmp[0] = rtmp[1] = 0;
+      vec_copy(2, rtmp, (r->values));
+      return 0;
+   }
 
    /* rtmp = U_i u */
    vec_copy(2, (r->values), utmp);
@@ -250,7 +257,7 @@ my_TriResidual(braid_App       app,
    }
 
    /* Compute action of west block */
-   if (uleft != NULL)
+   if (uleft != NULL && index > 1)
    {
       /* rtmp = rtmp - D_i^{-T} V_i D_i^{-1} Phi_i uleft */
       vec_copy(2, (uleft->values), utmp);
@@ -273,7 +280,7 @@ my_TriResidual(braid_App       app,
       vec_axpy(2, -1.0, utmp, rtmp);
    }
    /* subtract rhs kbar (add (L^T D^{-T} V D^{-1}) g)*/
-   if (index == 0)
+   if (index == 1)
    {      
       utmp[0] = 0.0;
       utmp[1] = -1.0;
@@ -328,6 +335,17 @@ my_TriSolve(braid_App       app,
    {
       dt = t - tprev;
    }
+
+   int index;
+   braid_TriStatusGetTIndex(status, &index);
+
+   if (index == 0)
+   {
+      u->values[0] = 0;
+      u->values[1] = 0;
+      return 0;
+   }
+   
 
    /* Create temporary vector */
    vec_create(2, &utmp);
@@ -717,7 +735,7 @@ main(int argc, char *argv[])
    app->u        = NULL;
    
    /* Initialize XBraid */
-   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime-1, app,
+   braid_InitTriMGRIT(MPI_COMM_WORLD, MPI_COMM_WORLD, dt, tstop, ntime, app,
                       my_TriResidual, my_TriSolve, my_Init, my_Clone, my_Free,
                       my_Sum, my_SpatialNorm, my_Access,
                       my_BufSize, my_BufPack, my_BufUnpack, &core);
@@ -747,13 +765,13 @@ main(int argc, char *argv[])
 
       /* Print state u to file */
       {
-         sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.u", (app->myid));
+         sprintf(filename, "%s.%03d", "trischur-ex-14-state.out.u", (app->myid));
          file = fopen(filename, "w");
-         for (i = 0; i < (app->npoints); i++)
+         for (i = 1; i < (app->npoints); i++)
          {
             double **u = (app->u);
 
-            index = (app->ilower) + i + 1;
+            index = (app->ilower) + i;
             fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, u[i][0], u[i][1]);
          }
          fflush(file);
@@ -768,12 +786,12 @@ main(int argc, char *argv[])
          double **u = (app->u);
          vec_create(2,&utmp);
 
-         sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.w", (app->myid));
+         sprintf(filename, "%s.%03d", "trischur-ex-14-state.out.w", (app->myid));
          file = fopen(filename, "w");
          vec_create(2, &w);
-         for (i = 0; i < (app->npoints); i++)
+         for (i = 1; i < (app->npoints); i++)
          {
-            if (i > 0)
+            if (i > 1)
             {
                vec_copy(2, u[i-1], w);
                apply_Phi(dt, w);
@@ -785,7 +803,7 @@ main(int argc, char *argv[])
                vec_copy(2, u[i], w);
             }
               /* Subtract g */
-            if (i == 0)
+            if (i == 1)
             {
                /* rtmp = rtmp + g; g = Phi_0 u_0 */   
                utmp[0] =  0.0;
@@ -796,7 +814,7 @@ main(int argc, char *argv[])
             apply_Dinv(dt, w, w);
             apply_V(dt, gamma_1, gamma_2, w);
             apply_DAdjointinv(dt, w, w);
-            index = (app->ilower) + i + 1;
+            index = (app->ilower) + i;
             fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, w[0], w[1]);
          }
          vec_destroy(w);
@@ -811,12 +829,12 @@ main(int argc, char *argv[])
          double **u = (app->u);
          vec_create(2,&utmp);
 
-         sprintf(filename, "%s.%03d", "trischur-ex-04-state.out.v", (app->myid));
+         sprintf(filename, "%s.%03d", "trischur-ex-14-state.out.v", (app->myid));
          file = fopen(filename, "w");
          vec_create(2, &v);
-         for (i = 0; i < (app->npoints); i++)
+         for (i = 1; i < (app->npoints); i++)
          {
-            if (i > 0)
+            if (i > 1)
             {
                vec_copy(2, u[i-1], v);
                apply_Phi(dt, v);
@@ -828,7 +846,7 @@ main(int argc, char *argv[])
                vec_copy(2, u[i], v);
             }
               /* Subtract g */
-            if (i == 0)
+            if (i == 1)
             {
                /* rtmp = rtmp + g; g = Phi_0 u_0 */   
                utmp[0] =  0.0;
@@ -837,7 +855,7 @@ main(int argc, char *argv[])
                vec_axpy(2, -1.0, utmp, v);
             }
             apply_Dinv(dt, v, v);
-            index = (app->ilower) + i + 1;
+            index = (app->ilower) + i;
             fprintf(file, "%05d: % 1.14e, % 1.14e\n", index, v[0], v[1]);
          }
          vec_destroy(v);
